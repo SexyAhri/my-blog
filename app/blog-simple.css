@@ -1265,16 +1265,19 @@
 .comment-form textarea {
     width: 100%;
     padding: 10px 14px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #d1d5db !important;
     border-radius: 6px;
     font-size: 14px;
+    background: #fff;
     transition: border-color 0.2s;
+    box-sizing: border-box;
 }
 
 .comment-form input:focus,
 .comment-form textarea:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
 .comment-form textarea {

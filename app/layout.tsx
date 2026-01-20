@@ -6,8 +6,8 @@ import "./blog-simple.css";
 import "./admin.css";
 
 export const metadata: Metadata = {
-  title: "My Blog",
-  description: "个人博客管理系统",
+  title: "VixenAhri Blog",
+  description: "VixenAhri 的个人博客",
 };
 
 export default function RootLayout({

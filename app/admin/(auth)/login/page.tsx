@@ -327,37 +327,6 @@ export default function LoginPage() {
               </Button>
             </Form.Item>
           </Form>
-
-          {/* 测试账号 */}
-          <div
-            style={{
-              padding: 16,
-              background: token.colorFillQuaternary,
-              borderRadius: 8,
-            }}
-          >
-            <div
-              style={{
-                color: token.colorTextSecondary,
-                fontSize: 13,
-                marginBottom: 8,
-              }}
-            >
-              测试账号:
-            </div>
-            <div
-              style={{ fontSize: 13, fontFamily: "monospace", lineHeight: 1.8 }}
-            >
-              <div>
-                <span style={{ color: token.colorTextTertiary }}>用户名: </span>
-                <span style={{ color: token.colorText }}>Ahri</span>
-              </div>
-              <div>
-                <span style={{ color: token.colorTextTertiary }}>密码: </span>
-                <span style={{ color: token.colorText }}>Ahri</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
