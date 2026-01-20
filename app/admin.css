@@ -213,6 +213,16 @@
     color: #1a1a1a;
 }
 
+/* TipTap 编辑器实际内容区 */
+.tiptap-editor .ProseMirror {
+    min-height: 400px;
+    padding: 16px 20px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #1a1a1a;
+    outline: none;
+}
+
 /* 在 post-form-main 中，编辑器内容需要滚动 */
 .post-form-main .tiptap-content {
     min-height: 0;
@@ -373,13 +383,25 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
+}
+
+.post-form-main .tiptap-editor>div:last-child {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.post-form-main .ProseMirror {
+    min-height: 100%;
+    padding: 16px 20px;
+    outline: none;
 }
 
 .post-form-main .tiptap-content {
     flex: 1;
     overflow-y: auto;
     min-height: 0;
-    max-height: 100%;
 }
 
 .post-form-sidebar {

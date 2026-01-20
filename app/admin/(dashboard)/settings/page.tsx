@@ -20,6 +20,7 @@ export default function SettingsPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("basic");
   const { message } = App.useApp();
 
   useEffect(() => {
@@ -89,12 +90,46 @@ export default function SettingsPage() {
     }
   };
 
-  const tabItems = [
-    {
-      key: "basic",
-      label: "基本设置",
-      children: (
-        <Card>
+  return (
+    <Spin spinning={loading}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 16,
+        }}
+      >
+        <div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>网站设置</h2>
+          <p style={{ margin: "4px 0 0", color: "#999" }}>
+            配置网站的基本信息和功能选项
+          </p>
+        </div>
+        <Button
+          type="primary"
+          icon={<SaveOutlined />}
+          loading={saving}
+          onClick={() => form.submit()}
+        >
+          保存设置
+        </Button>
+      </div>
+
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            { key: "basic", label: "基本设置" },
+            { key: "seo", label: "SEO 设置" },
+            { key: "display", label: "显示设置" },
+            { key: "social", label: "社交媒体" },
+          ]}
+        />
+
+        {/* 基本设置 */}
+        <Card style={{ display: activeTab === "basic" ? "block" : "none" }}>
           <Form.Item
             label="网站名称"
             name="siteName"
@@ -134,13 +169,9 @@ export default function SettingsPage() {
             <Input placeholder="请输入 ICP 备案号" />
           </Form.Item>
         </Card>
-      ),
-    },
-    {
-      key: "seo",
-      label: "SEO 设置",
-      children: (
-        <Card>
+
+        {/* SEO 设置 */}
+        <Card style={{ display: activeTab === "seo" ? "block" : "none" }}>
           <Form.Item
             label="统计代码"
             name="siteAnalytics"
@@ -163,13 +194,9 @@ export default function SettingsPage() {
             <Switch checkedChildren="开启" unCheckedChildren="关闭" />
           </Form.Item>
         </Card>
-      ),
-    },
-    {
-      key: "display",
-      label: "显示设置",
-      children: (
-        <Card>
+
+        {/* 显示设置 */}
+        <Card style={{ display: activeTab === "display" ? "block" : "none" }}>
           <Form.Item
             label="每页文章数"
             name="postsPerPage"
@@ -185,13 +212,9 @@ export default function SettingsPage() {
             <Switch checkedChildren="开启" unCheckedChildren="关闭" />
           </Form.Item>
         </Card>
-      ),
-    },
-    {
-      key: "social",
-      label: "社交媒体",
-      children: (
-        <Card>
+
+        {/* 社交媒体 */}
+        <Card style={{ display: activeTab === "social" ? "block" : "none" }}>
           <Form.Item label="GitHub" name="socialGithub">
             <Input placeholder="https://github.com/username" prefix="🐙" />
           </Form.Item>
@@ -205,38 +228,6 @@ export default function SettingsPage() {
             <Input placeholder="contact@example.com" prefix="📧" />
           </Form.Item>
         </Card>
-      ),
-    },
-  ];
-
-  return (
-    <Spin spinning={loading}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>网站设置</h2>
-          <p style={{ margin: "4px 0 0", color: "#999" }}>
-            配置网站的基本信息和功能选项
-          </p>
-        </div>
-        <Button
-          type="primary"
-          icon={<SaveOutlined />}
-          loading={saving}
-          onClick={() => form.submit()}
-        >
-          保存设置
-        </Button>
-      </div>
-
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Tabs items={tabItems} />
       </Form>
     </Spin>
   );
