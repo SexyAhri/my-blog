@@ -8,7 +8,7 @@ on:
     branches: [main, master]
 
 env:
-  IMAGE_NAME: sexyahri/my-blog
+  IMAGE_NAME: ahridocker/my-blog
 
 jobs:
   build:

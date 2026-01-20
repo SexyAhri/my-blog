@@ -15,7 +15,7 @@ services:
 
   # VixenAhri Blog - 博客应用
   vixenahri-blog:
-    image: sexyahri/my-blog:latest
+    image: ahridocker/my-blog:latest
     container_name: vixenahri-blog
     restart: unless-stopped
     ports:
