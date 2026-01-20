@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
 
+// 强制动态渲染
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const baseUrl = process.env.NEXTAUTH_URL || "https://blog.vixenahri.cn";
 

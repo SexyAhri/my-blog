@@ -1,6 +1,9 @@
 import { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 
+// 强制动态渲染，不在构建时预渲染
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXTAUTH_URL || "https://blog.vixenahri.cn";
 
