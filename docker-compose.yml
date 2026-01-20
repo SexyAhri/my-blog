@@ -1,28 +1,62 @@
 version: "3.8"
 
 services:
-  blog:
-    image: ghcr.io/你的用户名/my-blog:latest
+  # Watchtower - 自动更新容器
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=300
+    command: --interval 300 --cleanup vixenahri-blog
+
+  # VixenAhri Blog - 博客应用
+  vixenahri-blog:
+    image: sexyahri/my-blog:latest
     container_name: vixenahri-blog
     restart: unless-stopped
     ports:
       - "5177:5177"
     environment:
-      - DATABASE_URL=postgresql://用户名:密码@数据库地址:5432/myblog
-      - NEXTAUTH_SECRET=你的密钥
-      - NEXTAUTH_URL=https://blog.vixenahri.cn
+      # 数据库配置
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}/${DB_NAME:-myblog}
+      # NextAuth 配置
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:5177}
+      # 应用配置
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=5177
+    # 使用 host 网络模式访问宿主机数据库
+    network_mode: "host"
+    # 或者使用 extra_hosts（如果不想用 host 模式）
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
     volumes:
       - ./uploads:/app/public/uploads
     healthcheck:
-      test:
-        ["CMD", "wget", "-q", "--spider", "http://localhost:5177/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5177/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    networks:
-      - blog-network
 
-networks:
-  blog-network:
-    driver: bridge
+  # Cloudflared - Cloudflare 隧道（可选）
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    profiles:
+      - cloudflare
+
+# 使用方法：
+# 1. 创建 .env.local 文件并填写配置
+# 2. 启动服务：docker-compose up -d
+# 3. 启动包含 Cloudflare：docker-compose --profile cloudflare up -d
+# 4. 停止服务：docker-compose down
+# 5. 查看日志：docker-compose logs -f vixenahri-blog
+# 6. 重启服务：docker-compose restart vixenahri-blog
+# 7. 初始化数据库：docker exec -it vixenahri-blog npx prisma db push && npx prisma db seed
