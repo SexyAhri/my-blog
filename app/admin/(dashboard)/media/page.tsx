@@ -13,7 +13,6 @@ import {
   Row,
   Col,
   Modal,
-  Form,
   Input,
   Typography,
   Tag,
@@ -53,13 +52,14 @@ export default function MediaPage() {
   const [uploading, setUploading] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingMedia, setEditingMedia] = useState<Media | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editAlt, setEditAlt] = useState("");
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   const [searchText, setSearchText] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "size" | "name">("date");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { message, modal } = App.useApp();
-  const [form] = Form.useForm();
 
   useEffect(() => {
     loadMedia();
@@ -170,10 +170,8 @@ export default function MediaPage() {
 
   const handleEdit = (item: Media) => {
     setEditingMedia(item);
-    form.setFieldsValue({
-      title: item.title || "",
-      alt: item.alt || "",
-    });
+    setEditTitle(item.title || "");
+    setEditAlt(item.alt || "");
     setEditModalVisible(true);
   };
 
@@ -181,11 +179,10 @@ export default function MediaPage() {
     if (!editingMedia) return;
 
     try {
-      const values = await form.validateFields();
       const res = await fetch(`/api/admin/media/${editingMedia.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ title: editTitle, alt: editAlt }),
       });
 
       const data = await res.json();
@@ -478,18 +475,25 @@ export default function MediaPage() {
         onCancel={() => setEditModalVisible(false)}
         okText="保存"
         cancelText="取消"
-        destroyOnClose
       >
-        {editModalVisible && (
-          <Form form={form} layout="vertical">
-            <Form.Item label="标题" name="title">
-              <Input placeholder="请输入图片标题" />
-            </Form.Item>
-            <Form.Item label="替代文本 (Alt)" name="alt">
-              <Input placeholder="请输入图片描述" />
-            </Form.Item>
-          </Form>
-        )}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 8 }}>标题</label>
+          <Input
+            placeholder="请输入图片标题"
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+          />
+        </div>
+        <div>
+          <label style={{ display: "block", marginBottom: 8 }}>
+            替代文本 (Alt)
+          </label>
+          <Input
+            placeholder="请输入图片描述"
+            value={editAlt}
+            onChange={(e) => setEditAlt(e.target.value)}
+          />
+        </div>
       </Modal>
 
       {/* 预览模态框 */}

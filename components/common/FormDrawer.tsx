@@ -1,25 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Drawer, Button, Form, Row, theme, ConfigProvider } from "antd";
 import { FullscreenOutlined, FullscreenExitOutlined } from "@ant-design/icons";
-import type { FormInstance, FormProps } from "antd";
+import type { FormProps } from "antd";
 import type { ReactNode } from "react";
 
 interface FormDrawerProps {
   title: string;
   open: boolean;
   onClose: () => void;
-  onSubmit?: () => void;
+  onSubmit?: (values: any) => void | Promise<void>;
   width?: string;
   children: ReactNode;
-  form?: FormInstance;
-  formProps?: Omit<FormProps, "form">;
+  initialValues?: Record<string, any>;
+  formProps?: Omit<FormProps, "form" | "initialValues">;
   submitText?: string;
   cancelText?: string;
   loading?: boolean;
   footer?: ReactNode;
-  labelLayout?: "top" | "left" | "hidden"; // label位置：上方、左侧、隐藏，默认左侧
+  labelLayout?: "top" | "left" | "hidden";
 }
 
 export function FormDrawer({
@@ -29,7 +29,7 @@ export function FormDrawer({
   onSubmit,
   width = "50vw",
   children,
-  form,
+  initialValues,
   formProps,
   submitText = "确定",
   cancelText = "取消",
@@ -39,8 +39,18 @@ export function FormDrawer({
 }: FormDrawerProps) {
   const { token } = theme.useToken();
   const [isFullscreen, setIsFullscreen] = useState(true);
+  const [form] = Form.useForm();
 
-  // 根据 labelLayout 设置 Form 属性
+  // 当 drawer 打开时，设置表单值
+  useEffect(() => {
+    if (open && initialValues) {
+      form.setFieldsValue(initialValues);
+    }
+    if (!open) {
+      form.resetFields();
+    }
+  }, [open, initialValues, form]);
+
   const formLayout = labelLayout === "top" ? "vertical" : "horizontal";
   const labelCol =
     labelLayout === "hidden"
@@ -55,11 +65,19 @@ export function FormDrawer({
         ? { span: 18 }
         : undefined;
 
-  // 默认 footer
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      await onSubmit?.(values);
+    } catch (error) {
+      // 验证失败，不做处理
+    }
+  };
+
   const defaultFooter = (
     <div style={{ display: "flex", justifyContent: "center", gap: 12 }}>
       <Button onClick={onClose}>{cancelText}</Button>
-      <Button type="primary" onClick={onSubmit} loading={loading}>
+      <Button type="primary" onClick={handleSubmit} loading={loading}>
         {submitText}
       </Button>
     </div>
@@ -70,6 +88,7 @@ export function FormDrawer({
       title={title}
       open={open}
       onClose={onClose}
+      destroyOnClose
       styles={{
         wrapper: { width: isFullscreen ? "100vw" : width },
         header: {
@@ -98,19 +117,15 @@ export function FormDrawer({
       }
       footer={footer !== undefined ? footer : defaultFooter}
     >
-      {open && form ? (
-        <Form
-          form={form}
-          layout={formLayout}
-          labelCol={labelCol}
-          wrapperCol={wrapperCol}
-          {...formProps}
-        >
-          <Row gutter={16}>{children}</Row>
-        </Form>
-      ) : open ? (
-        children
-      ) : null}
+      <Form
+        form={form}
+        layout={formLayout}
+        labelCol={labelCol}
+        wrapperCol={wrapperCol}
+        {...formProps}
+      >
+        <Row gutter={16}>{children}</Row>
+      </Form>
     </Drawer>
   );
 }
@@ -141,6 +156,7 @@ export function DetailDrawer({
       title={title}
       open={open}
       onClose={onClose}
+      destroyOnClose
       styles={{
         wrapper: { width: isFullscreen ? "100vw" : width },
         header: {
@@ -174,14 +190,13 @@ export function DetailDrawer({
   );
 }
 
-// 查看抽屉（表单只读模式）
+// 查看抽屉（只读模式）
 interface ViewDrawerProps {
   title: string;
   open: boolean;
   onClose: () => void;
   width?: string;
   children: ReactNode;
-  form?: FormInstance;
   labelLayout?: "top" | "left" | "hidden";
 }
 
@@ -191,7 +206,6 @@ export function ViewDrawer({
   onClose,
   width = "50vw",
   children,
-  form,
   labelLayout = "left",
 }: ViewDrawerProps) {
   const { token } = theme.useToken();
@@ -216,6 +230,7 @@ export function ViewDrawer({
       title={title}
       open={open}
       onClose={onClose}
+      destroyOnClose
       styles={{
         wrapper: { width: isFullscreen ? "100vw" : width },
         header: {
@@ -248,33 +263,26 @@ export function ViewDrawer({
         </div>
       }
     >
-      {open && (
-        <ConfigProvider
-          theme={{
-            components: {
-              Input: { colorBgContainerDisabled: "transparent" },
-              Select: { colorBgContainerDisabled: "transparent" },
-              TreeSelect: { colorBgContainerDisabled: "transparent" },
-              InputNumber: { colorBgContainerDisabled: "transparent" },
-              DatePicker: { colorBgContainerDisabled: "transparent" },
-            },
-          }}
+      <ConfigProvider
+        theme={{
+          components: {
+            Input: { colorBgContainerDisabled: "transparent" },
+            Select: { colorBgContainerDisabled: "transparent" },
+            TreeSelect: { colorBgContainerDisabled: "transparent" },
+            InputNumber: { colorBgContainerDisabled: "transparent" },
+            DatePicker: { colorBgContainerDisabled: "transparent" },
+          },
+        }}
+      >
+        <Form
+          layout={formLayout}
+          labelCol={labelCol}
+          wrapperCol={wrapperCol}
+          disabled
         >
-          {form ? (
-            <Form
-              form={form}
-              layout={formLayout}
-              labelCol={labelCol}
-              wrapperCol={wrapperCol}
-              disabled
-            >
-              <Row gutter={16}>{children}</Row>
-            </Form>
-          ) : (
-            children
-          )}
-        </ConfigProvider>
-      )}
+          <Row gutter={16}>{children}</Row>
+        </Form>
+      </ConfigProvider>
     </Drawer>
   );
 }

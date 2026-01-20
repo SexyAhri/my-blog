@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Row, Col, Tag, Button, Space, App, Form } from "antd";
+import { Row, Col, Tag, Button, Space, App } from "antd";
 import { TagsOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   MetricCard,
@@ -21,9 +21,9 @@ export default function TagsPage() {
   const [tags, setTags] = useState<TagType[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTag, setEditingTag] = useState<TagType | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const { message, modal } = App.useApp();
-  const [form] = Form.useForm();
 
   useEffect(() => {
     loadTags();
@@ -45,8 +45,7 @@ export default function TagsPage() {
   };
 
   const handleEdit = (record: TagType) => {
-    setEditingId(record.id);
-    form.setFieldsValue(record);
+    setEditingTag(record);
     setDrawerOpen(true);
   };
 
@@ -76,13 +75,13 @@ export default function TagsPage() {
     });
   };
 
-  const handleSubmit = async () => {
-    const values = await form.validateFields();
+  const handleSubmit = async (values: any) => {
+    setSubmitting(true);
     try {
-      const url = editingId
-        ? `/api/admin/tags/${editingId}`
+      const url = editingTag
+        ? `/api/admin/tags/${editingTag.id}`
         : "/api/admin/tags";
-      const method = editingId ? "PUT" : "POST";
+      const method = editingTag ? "PUT" : "POST";
 
       const res = await fetch(url, {
         method,
@@ -92,16 +91,17 @@ export default function TagsPage() {
 
       const data = await res.json();
       if (data.success) {
-        message.success(editingId ? "更新成功" : "创建成功");
+        message.success(editingTag ? "更新成功" : "创建成功");
         setDrawerOpen(false);
-        form.resetFields();
-        setEditingId(null);
+        setEditingTag(null);
         loadTags();
       } else {
         message.error(data.error || "操作失败");
       }
     } catch (error) {
       message.error("操作失败");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -189,8 +189,7 @@ export default function TagsPage() {
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => {
-                setEditingId(null);
-                form.resetFields();
+                setEditingTag(null);
                 setDrawerOpen(true);
               }}
             >
@@ -206,15 +205,15 @@ export default function TagsPage() {
       />
 
       <FormDrawer
-        title={editingId ? "编辑标签" : "添加标签"}
+        title={editingTag ? "编辑标签" : "添加标签"}
         open={drawerOpen}
         onClose={() => {
           setDrawerOpen(false);
-          form.resetFields();
-          setEditingId(null);
+          setEditingTag(null);
         }}
         onSubmit={handleSubmit}
-        form={form}
+        initialValues={editingTag || {}}
+        loading={submitting}
       >
         <InputItem
           name="name"

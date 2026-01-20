@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Row, Col, Tag, Button, Space, App, Form } from "antd";
+import { Row, Col, Tag, Button, Space, App } from "antd";
 import {
   FolderOutlined,
   PlusOutlined,
@@ -27,9 +27,9 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const { message, modal } = App.useApp();
-  const [form] = Form.useForm();
 
   useEffect(() => {
     loadCategories();
@@ -51,8 +51,7 @@ export default function CategoriesPage() {
   };
 
   const handleEdit = (record: Category) => {
-    setEditingId(record.id);
-    form.setFieldsValue(record);
+    setEditingCategory(record);
     setDrawerOpen(true);
   };
 
@@ -82,13 +81,13 @@ export default function CategoriesPage() {
     });
   };
 
-  const handleSubmit = async () => {
-    const values = await form.validateFields();
+  const handleSubmit = async (values: any) => {
+    setSubmitting(true);
     try {
-      const url = editingId
-        ? `/api/admin/categories/${editingId}`
+      const url = editingCategory
+        ? `/api/admin/categories/${editingCategory.id}`
         : "/api/admin/categories";
-      const method = editingId ? "PUT" : "POST";
+      const method = editingCategory ? "PUT" : "POST";
 
       const res = await fetch(url, {
         method,
@@ -98,16 +97,17 @@ export default function CategoriesPage() {
 
       const data = await res.json();
       if (data.success) {
-        message.success(editingId ? "更新成功" : "创建成功");
+        message.success(editingCategory ? "更新成功" : "创建成功");
         setDrawerOpen(false);
-        form.resetFields();
-        setEditingId(null);
+        setEditingCategory(null);
         loadCategories();
       } else {
         message.error(data.error || "操作失败");
       }
     } catch (error) {
       message.error("操作失败");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -202,8 +202,7 @@ export default function CategoriesPage() {
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => {
-                setEditingId(null);
-                form.resetFields();
+                setEditingCategory(null);
                 setDrawerOpen(true);
               }}
             >
@@ -219,15 +218,15 @@ export default function CategoriesPage() {
       />
 
       <FormDrawer
-        title={editingId ? "编辑分类" : "添加分类"}
+        title={editingCategory ? "编辑分类" : "添加分类"}
         open={drawerOpen}
         onClose={() => {
           setDrawerOpen(false);
-          form.resetFields();
-          setEditingId(null);
+          setEditingCategory(null);
         }}
         onSubmit={handleSubmit}
-        form={form}
+        initialValues={editingCategory || {}}
+        loading={submitting}
       >
         <InputItem
           name="name"

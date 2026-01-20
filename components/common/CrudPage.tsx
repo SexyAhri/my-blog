@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, ReactNode } from "react";
-import { Form, App } from "antd";
-import type { FormInstance } from "antd";
+import { App } from "antd";
 import {
   SearchToolbar,
   DataTable,
@@ -18,7 +17,6 @@ interface CrudPageProps<T extends { id: string }> {
   onUpdate?: (id: string, values: any) => void;
   onDelete?: (id: string) => void;
 
-  // 使用renderColumns来自动注入edit/delete处理函数
   renderColumns: (handlers: {
     onView?: (record: T) => void;
     onEdit: (record: T) => void;
@@ -31,7 +29,8 @@ interface CrudPageProps<T extends { id: string }> {
   showStatusFilter?: boolean;
   statusOptions?: Array<{ value: string; label: string }>;
   formTitle?: { add: string; edit: string; view: string };
-  formFields?: (form: FormInstance, editingRecord: T | null) => ReactNode;
+  formFields?: (editingRecord: T | null) => ReactNode;
+  viewFields?: (record: T) => ReactNode;
   defaultFormValues?: Record<string, any>;
   addButtonText?: string;
   onBeforeSubmit?: (values: any, editingRecord: T | null) => any;
@@ -56,6 +55,7 @@ export function CrudPage<T extends { id: string; status?: string }>({
   statusOptions,
   formTitle = { add: "新增", edit: "编辑", view: "查看" },
   formFields,
+  viewFields,
   defaultFormValues = {},
   addButtonText = "新增",
   onBeforeSubmit,
@@ -72,7 +72,6 @@ export function CrudPage<T extends { id: string; status?: string }>({
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<T | null>(null);
   const [viewingRecord, setViewingRecord] = useState<T | null>(null);
-  const [form] = Form.useForm();
 
   const filteredData = dataSource.filter((item) => {
     const matchSearch =
@@ -94,8 +93,6 @@ export function CrudPage<T extends { id: string; status?: string }>({
       return;
     }
     setEditingRecord(null);
-    form.resetFields();
-    form.setFieldsValue(defaultFormValues);
     setDrawerOpen(true);
   };
 
@@ -106,7 +103,6 @@ export function CrudPage<T extends { id: string; status?: string }>({
 
   const handleEdit = (record: T) => {
     setEditingRecord(record);
-    form.setFieldsValue(record);
     setDrawerOpen(true);
   };
 
@@ -116,16 +112,16 @@ export function CrudPage<T extends { id: string; status?: string }>({
     }
   };
 
-  const handleSubmit = async () => {
-    let values = await form.validateFields();
+  const handleSubmit = async (values: any) => {
+    let finalValues = values;
     if (onBeforeSubmit) {
-      values = onBeforeSubmit(values, editingRecord);
+      finalValues = onBeforeSubmit(values, editingRecord);
     }
     if (editingRecord && onUpdate) {
-      onUpdate(editingRecord.id, values);
+      onUpdate(editingRecord.id, finalValues);
       message.success("更新成功");
     } else if (onAdd) {
-      onAdd(values);
+      onAdd(finalValues);
       message.success("添加成功");
     }
     setDrawerOpen(false);
@@ -168,16 +164,19 @@ export function CrudPage<T extends { id: string; status?: string }>({
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}
             onSubmit={handleSubmit}
-            form={form}
+            initialValues={editingRecord || defaultFormValues}
           >
-            {formFields(form, editingRecord)}
+            {formFields(editingRecord)}
           </FormDrawer>
           <ViewDrawer
             title={formTitle.view}
             open={viewDrawerOpen}
             onClose={() => setViewDrawerOpen(false)}
           >
-            {viewingRecord && formFields(form, viewingRecord)}
+            {viewingRecord &&
+              (viewFields
+                ? viewFields(viewingRecord)
+                : formFields(viewingRecord))}
           </ViewDrawer>
         </>
       )}

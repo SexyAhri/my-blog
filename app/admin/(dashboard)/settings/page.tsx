@@ -6,7 +6,6 @@ import {
   Form,
   Input,
   Button,
-  Space,
   App,
   Spin,
   Tabs,
@@ -33,7 +32,6 @@ export default function SettingsPage() {
       const res = await fetch("/api/admin/settings");
       const data = await res.json();
       if (data.success) {
-        // 设置表单默认值
         form.setFieldsValue({
           siteName: data.data.siteName || "我的博客",
           siteDescription:
@@ -64,7 +62,6 @@ export default function SettingsPage() {
   const handleSubmit = async (values: any) => {
     setSaving(true);
     try {
-      // 转换布尔值为字符串
       const settings = {
         ...values,
         postsPerPage: values.postsPerPage?.toString() || "10",
@@ -92,14 +89,6 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ textAlign: "center", padding: 100 }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
-
   const tabItems = [
     {
       key: "basic",
@@ -113,7 +102,6 @@ export default function SettingsPage() {
           >
             <Input placeholder="请输入网站名称" />
           </Form.Item>
-
           <Form.Item
             label="网站描述"
             name="siteDescription"
@@ -126,7 +114,6 @@ export default function SettingsPage() {
               maxLength={200}
             />
           </Form.Item>
-
           <Form.Item
             label="网站关键词"
             name="siteKeywords"
@@ -134,19 +121,15 @@ export default function SettingsPage() {
           >
             <Input placeholder="博客,技术,分享" />
           </Form.Item>
-
           <Form.Item label="网站地址" name="siteUrl">
             <Input placeholder="https://example.com" />
           </Form.Item>
-
           <Form.Item label="网站作者" name="siteAuthor">
             <Input placeholder="请输入作者名称" />
           </Form.Item>
-
           <Form.Item label="联系邮箱" name="siteEmail">
             <Input type="email" placeholder="admin@example.com" />
           </Form.Item>
-
           <Form.Item label="ICP 备案号" name="siteIcp">
             <Input placeholder="请输入 ICP 备案号" />
           </Form.Item>
@@ -169,7 +152,6 @@ export default function SettingsPage() {
               style={{ fontFamily: "monospace" }}
             />
           </Form.Item>
-
           <Form.Item
             label="生成 Sitemap"
             name="enableSitemap"
@@ -177,7 +159,6 @@ export default function SettingsPage() {
           >
             <Switch checkedChildren="开启" unCheckedChildren="关闭" />
           </Form.Item>
-
           <Form.Item label="生成 RSS" name="enableRss" valuePropName="checked">
             <Switch checkedChildren="开启" unCheckedChildren="关闭" />
           </Form.Item>
@@ -196,7 +177,6 @@ export default function SettingsPage() {
           >
             <InputNumber min={1} max={50} style={{ width: "100%" }} />
           </Form.Item>
-
           <Form.Item
             label="启用评论"
             name="enableComments"
@@ -215,15 +195,12 @@ export default function SettingsPage() {
           <Form.Item label="GitHub" name="socialGithub">
             <Input placeholder="https://github.com/username" prefix="🐙" />
           </Form.Item>
-
           <Form.Item label="Twitter" name="socialTwitter">
             <Input placeholder="https://twitter.com/username" prefix="🐦" />
           </Form.Item>
-
           <Form.Item label="微博" name="socialWeibo">
             <Input placeholder="https://weibo.com/username" prefix="📱" />
           </Form.Item>
-
           <Form.Item label="邮箱" name="socialEmail">
             <Input placeholder="contact@example.com" prefix="📧" />
           </Form.Item>
@@ -233,7 +210,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div>
+    <Spin spinning={loading}>
       <div
         style={{
           display: "flex",
@@ -261,6 +238,6 @@ export default function SettingsPage() {
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Tabs items={tabItems} />
       </Form>
-    </div>
+    </Spin>
   );
 }

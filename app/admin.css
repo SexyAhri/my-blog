@@ -206,10 +206,19 @@
 /* 编辑器内容区 */
 .tiptap-content {
     min-height: 400px;
+    max-height: none;
     padding: 16px 20px;
     font-size: 15px;
     line-height: 1.7;
     color: #1a1a1a;
+}
+
+/* 在 post-form-main 中，编辑器内容需要滚动 */
+.post-form-main .tiptap-content {
+    min-height: 0;
+    max-height: none;
+    flex: 1;
+    overflow-y: auto;
 }
 
 .tiptap-content:focus {
@@ -370,6 +379,7 @@
     flex: 1;
     overflow-y: auto;
     min-height: 0;
+    max-height: 100%;
 }
 
 .post-form-sidebar {
