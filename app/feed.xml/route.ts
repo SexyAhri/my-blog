@@ -4,6 +4,15 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  // 检查是否启用 RSS
+  const enableRss = await prisma.setting.findUnique({
+    where: { key: "enableRss" },
+  });
+
+  if (enableRss?.value !== "true") {
+    return new Response("RSS feed is disabled", { status: 404 });
+  }
+
   const baseUrl = process.env.NEXTAUTH_URL || "https://blog.vixenahri.cn";
 
   const posts = await prisma.post.findMany({

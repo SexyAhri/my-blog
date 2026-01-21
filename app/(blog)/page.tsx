@@ -33,11 +33,23 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    // 加载每页文章数设置
+    fetch("/api/settings/display")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.postsPerPage) {
+          setPageSize(parseInt(data.postsPerPage) || 10);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     loadPosts();
-  }, [page]);
+  }, [page, pageSize]);
 
   const loadPosts = async () => {
     setLoading(true);

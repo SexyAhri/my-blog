@@ -24,10 +24,18 @@ export async function GET(request: NextRequest) {
         title: true,
         slug: true,
         excerpt: true,
+        publishedAt: true,
         createdAt: true,
+        coverImage: true,
+        author: { select: { name: true } },
         category: { select: { name: true, slug: true } },
+        tags: {
+          include: {
+            tag: { select: { name: true, slug: true } },
+          },
+        },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { publishedAt: "desc" },
       take: 20,
     });
 

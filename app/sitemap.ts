@@ -5,6 +5,15 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // 检查是否启用 Sitemap
+  const enableSitemap = await prisma.setting.findUnique({
+    where: { key: "enableSitemap" },
+  });
+
+  if (enableSitemap?.value !== "true") {
+    return [];
+  }
+
   const baseUrl = process.env.NEXTAUTH_URL || "https://blog.vixenahri.cn";
 
   // 获取所有已发布文章
