@@ -79,6 +79,9 @@ export async function PUT(
       categoryId,
       tags,
       tagIds,
+      seriesId,
+      seriesOrder,
+      scheduledAt,
     } = body;
 
     if (!title || !content) {
@@ -119,6 +122,10 @@ export async function PUT(
       where: { postId: id },
     });
 
+    // 处理定时发布
+    const isScheduled = scheduledAt && new Date(scheduledAt) > new Date();
+    const shouldPublish = published && !isScheduled;
+
     // 更新文章
     const post = await prisma.post.update({
       where: { id },
@@ -128,12 +135,15 @@ export async function PUT(
         content,
         excerpt,
         coverImage,
-        published: published || false,
+        published: shouldPublish,
         publishedAt:
-          published && !currentPost?.published
+          shouldPublish && !currentPost?.published
             ? new Date()
             : currentPost?.publishedAt,
+        scheduledAt: isScheduled ? new Date(scheduledAt) : null,
         categoryId: categoryId || null,
+        seriesId: seriesId || null,
+        seriesOrder: seriesOrder || null,
         tags: finalTagIds.length
           ? {
               create: finalTagIds.map((tagId: string) => ({
@@ -144,6 +154,7 @@ export async function PUT(
       },
       include: {
         category: true,
+        series: true,
         tags: {
           include: {
             tag: true,
@@ -168,7 +179,7 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       data: post,
-      message: "文章更新成功",
+      message: isScheduled ? "文章已设置定时发布" : "文章更新成功",
     });
   } catch (error) {
     console.error("Update post error:", error);

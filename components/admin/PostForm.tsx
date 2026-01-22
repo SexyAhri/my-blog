@@ -12,6 +12,8 @@ import {
   App,
   Image,
   Tag,
+  DatePicker,
+  InputNumber,
 } from "antd";
 import {
   SaveOutlined,
@@ -21,10 +23,12 @@ import {
   CheckCircleOutlined,
   SyncOutlined,
   DeleteOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 import PostEditor from "./PostEditor";
 import ImagePicker from "./ImagePicker";
 import PostPreview from "./PostPreview";
+import dayjs from "dayjs";
 
 const { TextArea } = Input;
 
@@ -40,6 +44,7 @@ export default function PostForm({ post }: PostFormProps) {
   const [content, setContent] = useState(post?.content || "");
   const [categories, setCategories] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
+  const [series, setSeries] = useState<any[]>([]);
   const [imagePickerVisible, setImagePickerVisible] = useState(false);
   const [coverImage, setCoverImage] = useState(post?.coverImage || "");
   const [autoSaveStatus, setAutoSaveStatus] = useState<
@@ -48,10 +53,12 @@ export default function PostForm({ post }: PostFormProps) {
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedRef = useRef<string>("");
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(!!post?.scheduledAt);
 
   useEffect(() => {
     loadCategories();
     loadTags();
+    loadSeries();
     return () => {
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
@@ -121,19 +128,35 @@ export default function PostForm({ post }: PostFormProps) {
     }
   };
 
+  const loadSeries = async () => {
+    try {
+      const res = await fetch("/api/admin/series");
+      const data = await res.json();
+      if (data.success) setSeries(data.data);
+    } catch (error) {
+      console.error("Failed to load series:", error);
+    }
+  };
+
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
       const url = post ? `/api/admin/posts/${post.id}` : "/api/admin/posts";
       const method = post ? "PUT" : "POST";
+      
+      const submitData = {
+        ...values,
+        content,
+        coverImage: coverImage || null,
+        scheduledAt: showSchedule && values.scheduledAt 
+          ? values.scheduledAt.toISOString() 
+          : null,
+      };
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...values,
-          content,
-          coverImage: coverImage || null,
-        }),
+        body: JSON.stringify(submitData),
       });
       const data = await res.json();
       if (data.success) {
@@ -209,7 +232,10 @@ export default function PostForm({ post }: PostFormProps) {
           excerpt: post?.excerpt || "",
           categoryId: post?.categoryId || undefined,
           tagIds: post?.tagIds || [],
+          seriesId: post?.seriesId || undefined,
+          seriesOrder: post?.seriesOrder || undefined,
           published: post?.published ?? false,
+          scheduledAt: post?.scheduledAt ? dayjs(post.scheduledAt) : undefined,
         }}
         style={{
           flex: 1,
@@ -282,6 +308,51 @@ export default function PostForm({ post }: PostFormProps) {
               </Form.Item>
               <Form.Item label="状态" name="published" valuePropName="checked">
                 <Switch checkedChildren="发布" unCheckedChildren="草稿" />
+              </Form.Item>
+              
+              {/* 定时发布 */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <ClockCircleOutlined />
+                  <span>定时发布</span>
+                  <Switch
+                    size="small"
+                    checked={showSchedule}
+                    onChange={setShowSchedule}
+                  />
+                </div>
+                {showSchedule && (
+                  <Form.Item name="scheduledAt" style={{ marginBottom: 0 }}>
+                    <DatePicker
+                      showTime
+                      placeholder="选择发布时间"
+                      style={{ width: "100%" }}
+                      disabledDate={(current) => current && current < dayjs().startOf("day")}
+                    />
+                  </Form.Item>
+                )}
+              </div>
+            </div>
+
+            {/* 系列/专栏 */}
+            <div className="post-form-section">
+              <div className="post-form-section-title">系列/专栏</div>
+              <Form.Item label="所属系列" name="seriesId">
+                <Select
+                  placeholder="选择系列"
+                  allowClear
+                  options={series.map((s) => ({
+                    label: s.name,
+                    value: s.id,
+                  }))}
+                />
+              </Form.Item>
+              <Form.Item label="系列顺序" name="seriesOrder">
+                <InputNumber
+                  placeholder="排序号"
+                  min={1}
+                  style={{ width: "100%" }}
+                />
               </Form.Item>
             </div>
 

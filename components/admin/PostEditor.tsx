@@ -5,7 +5,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import { useEffect, useState } from "react";
-import { Button, Space, Modal } from "antd";
+import { Button, Space, Modal, Tooltip } from "antd";
 import ImagePicker from "./ImagePicker";
 
 interface PostEditorProps {
@@ -41,6 +41,42 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
     editorProps: {
       attributes: {
         class: "tiptap-content",
+      },
+      handleKeyDown: (view, event) => {
+        // Markdown 快捷键
+        if (event.ctrlKey || event.metaKey) {
+          switch (event.key) {
+            case "b":
+              event.preventDefault();
+              editor?.chain().focus().toggleBold().run();
+              return true;
+            case "i":
+              event.preventDefault();
+              editor?.chain().focus().toggleItalic().run();
+              return true;
+            case "k":
+              event.preventDefault();
+              setShowLinkInput(true);
+              return true;
+            case "1":
+              event.preventDefault();
+              editor?.chain().focus().toggleHeading({ level: 1 }).run();
+              return true;
+            case "2":
+              event.preventDefault();
+              editor?.chain().focus().toggleHeading({ level: 2 }).run();
+              return true;
+            case "3":
+              event.preventDefault();
+              editor?.chain().focus().toggleHeading({ level: 3 }).run();
+              return true;
+            case "`":
+              event.preventDefault();
+              editor?.chain().focus().toggleCodeBlock().run();
+              return true;
+          }
+        }
+        return false;
       },
     },
     onUpdate: ({ editor }) => {
@@ -84,22 +120,24 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
         <Space wrap>
           {/* 文本格式 */}
           <Space.Compact>
-            <button
-              type="button"
-              onClick={() => editor.chain().focus().toggleBold().run()}
-              className={editor.isActive("bold") ? "is-active" : ""}
-              title="粗体"
-            >
-              <strong>B</strong>
-            </button>
-            <button
-              type="button"
-              onClick={() => editor.chain().focus().toggleItalic().run()}
-              className={editor.isActive("italic") ? "is-active" : ""}
-              title="斜体"
-            >
-              <em>I</em>
-            </button>
+            <Tooltip title="粗体 (Ctrl+B)">
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().toggleBold().run()}
+                className={editor.isActive("bold") ? "is-active" : ""}
+              >
+                <strong>B</strong>
+              </button>
+            </Tooltip>
+            <Tooltip title="斜体 (Ctrl+I)">
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().toggleItalic().run()}
+                className={editor.isActive("italic") ? "is-active" : ""}
+              >
+                <em>I</em>
+              </button>
+            </Tooltip>
             <button
               type="button"
               onClick={() => editor.chain().focus().toggleStrike().run()}
@@ -114,42 +152,45 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
 
           {/* 标题 */}
           <Space.Compact>
-            <button
-              type="button"
-              onClick={() =>
-                editor.chain().focus().toggleHeading({ level: 1 }).run()
-              }
-              className={
-                editor.isActive("heading", { level: 1 }) ? "is-active" : ""
-              }
-              title="标题 1"
-            >
-              H1
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                editor.chain().focus().toggleHeading({ level: 2 }).run()
-              }
-              className={
-                editor.isActive("heading", { level: 2 }) ? "is-active" : ""
-              }
-              title="标题 2"
-            >
-              H2
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                editor.chain().focus().toggleHeading({ level: 3 }).run()
-              }
-              className={
-                editor.isActive("heading", { level: 3 }) ? "is-active" : ""
-              }
-              title="标题 3"
-            >
-              H3
-            </button>
+            <Tooltip title="标题 1 (Ctrl+1)">
+              <button
+                type="button"
+                onClick={() =>
+                  editor.chain().focus().toggleHeading({ level: 1 }).run()
+                }
+                className={
+                  editor.isActive("heading", { level: 1 }) ? "is-active" : ""
+                }
+              >
+                H1
+              </button>
+            </Tooltip>
+            <Tooltip title="标题 2 (Ctrl+2)">
+              <button
+                type="button"
+                onClick={() =>
+                  editor.chain().focus().toggleHeading({ level: 2 }).run()
+                }
+                className={
+                  editor.isActive("heading", { level: 2 }) ? "is-active" : ""
+                }
+              >
+                H2
+              </button>
+            </Tooltip>
+            <Tooltip title="标题 3 (Ctrl+3)">
+              <button
+                type="button"
+                onClick={() =>
+                  editor.chain().focus().toggleHeading({ level: 3 }).run()
+                }
+                className={
+                  editor.isActive("heading", { level: 3 }) ? "is-active" : ""
+                }
+              >
+                H3
+              </button>
+            </Tooltip>
           </Space.Compact>
 
           <div className="divider" />
@@ -185,22 +226,24 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
             >
               🖼️ 图片
             </button>
-            <button
-              type="button"
-              onClick={() => setShowLinkInput(true)}
-              className={editor.isActive("link") ? "is-active" : ""}
-              title="插入链接"
-            >
-              🔗 链接
-            </button>
-            <button
-              type="button"
-              onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-              className={editor.isActive("codeBlock") ? "is-active" : ""}
-              title="代码块"
-            >
-              {"</>"}
-            </button>
+            <Tooltip title="插入链接 (Ctrl+K)">
+              <button
+                type="button"
+                onClick={() => setShowLinkInput(true)}
+                className={editor.isActive("link") ? "is-active" : ""}
+              >
+                🔗 链接
+              </button>
+            </Tooltip>
+            <Tooltip title="代码块 (Ctrl+`)">
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+                className={editor.isActive("codeBlock") ? "is-active" : ""}
+              >
+                {"</>"}
+              </button>
+            </Tooltip>
             <button
               type="button"
               onClick={() => editor.chain().focus().toggleBlockquote().run()}

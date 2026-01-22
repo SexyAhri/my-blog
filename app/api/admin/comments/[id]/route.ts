@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendCommentReplyNotification } from "@/lib/email";
 
 // PUT - 审核评论
 export async function PUT(
@@ -25,6 +26,28 @@ export async function PUT(
       where: { id },
       data: { approved },
     });
+
+    // 如果是回复评论且被批准，发送通知给原评论者
+    if (approved && comment.parentId) {
+      const parentComment = await prisma.comment.findUnique({
+        where: { id: comment.parentId },
+        include: {
+          post: { select: { title: true, slug: true } },
+        },
+      });
+
+      if (parentComment && parentComment.email) {
+        sendCommentReplyNotification({
+          to: parentComment.email,
+          postTitle: parentComment.post.title,
+          postSlug: parentComment.post.slug,
+          commenterName: parentComment.author,
+          commentContent: parentComment.content,
+          replyContent: comment.content,
+          replyAuthor: comment.author,
+        }).catch(console.error);
+      }
+    }
 
     return NextResponse.json({
       success: true,

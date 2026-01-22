@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendNewCommentNotification } from "@/lib/email";
 
 // GET - 获取文章评论
 export async function GET(request: NextRequest) {
@@ -64,10 +65,12 @@ export async function POST(request: NextRequest) {
     }
 
     let finalPostId = postId;
+    let post = null;
+    
     if (!finalPostId && slug) {
-      const post = await prisma.post.findUnique({
+      post = await prisma.post.findUnique({
         where: { slug },
-        select: { id: true },
+        select: { id: true, title: true, slug: true },
       });
       if (!post) {
         return NextResponse.json(
@@ -76,6 +79,11 @@ export async function POST(request: NextRequest) {
         );
       }
       finalPostId = post.id;
+    } else if (finalPostId) {
+      post = await prisma.post.findUnique({
+        where: { id: finalPostId },
+        select: { id: true, title: true, slug: true },
+      });
     }
 
     const comment = await prisma.comment.create({
@@ -89,6 +97,17 @@ export async function POST(request: NextRequest) {
         approved: false, // 默认需要审核
       },
     });
+
+    // 发送新评论通知给管理员
+    if (post) {
+      sendNewCommentNotification({
+        postTitle: post.title,
+        postSlug: post.slug,
+        commenterName: author,
+        commenterEmail: email,
+        commentContent: content,
+      }).catch(console.error);
+    }
 
     return NextResponse.json({
       success: true,

@@ -64,27 +64,34 @@ model VerificationToken {
 }
 
 model Post {
-  id          String    @id @default(cuid())
-  title       String
-  slug        String    @unique
-  content     String
-  excerpt     String?
-  coverImage  String?
-  published   Boolean   @default(false)
-  viewCount   Int       @default(0)
-  authorId    String
-  categoryId  String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  publishedAt DateTime?
-  comments    Comment[]
-  tags        PostTag[]
-  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  category    Category? @relation(fields: [categoryId], references: [id])
+  id           String    @id @default(cuid())
+  title        String
+  slug         String    @unique
+  content      String
+  excerpt      String?
+  coverImage   String?
+  published    Boolean   @default(false)
+  viewCount    Int       @default(0)
+  likeCount    Int       @default(0)
+  authorId     String
+  categoryId   String?
+  seriesId     String?
+  seriesOrder  Int?
+  scheduledAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  publishedAt  DateTime?
+  comments     Comment[]
+  tags         PostTag[]
+  likes        PostLike[]
+  author       User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category     Category? @relation(fields: [categoryId], references: [id])
+  series       Series?   @relation(fields: [seriesId], references: [id])
 
   @@index([slug])
   @@index([published])
   @@index([createdAt])
+  @@index([scheduledAt])
   @@map("posts")
 }
 
@@ -238,4 +245,31 @@ model DailyStat {
 
   @@index([date])
   @@map("daily_stats")
+}
+
+
+// 文章系列/专栏
+model Series {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  coverImage  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  posts       Post[]
+
+  @@map("series")
+}
+
+// 文章点赞
+model PostLike {
+visitorId String
+  postId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([visitorId, postId])
+  @@index([postId])
+  @@map("post_likes")
 }

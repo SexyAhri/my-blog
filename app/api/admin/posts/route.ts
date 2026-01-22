@@ -75,6 +75,9 @@ export async function POST(request: NextRequest) {
       categoryId,
       tags,
       tagIds,
+      seriesId,
+      seriesOrder,
+      scheduledAt,
     } = body;
 
     if (!title || !content) {
@@ -102,6 +105,10 @@ export async function POST(request: NextRequest) {
     // 支持 tags 或 tagIds 参数
     const finalTagIds = tagIds || tags || [];
 
+    // 处理定时发布
+    const isScheduled = scheduledAt && new Date(scheduledAt) > new Date();
+    const shouldPublish = published && !isScheduled;
+
     // 创建文章
     const post = await prisma.post.create({
       data: {
@@ -110,10 +117,13 @@ export async function POST(request: NextRequest) {
         content,
         excerpt,
         coverImage,
-        published: published || false,
-        publishedAt: published ? new Date() : null,
+        published: shouldPublish,
+        publishedAt: shouldPublish ? new Date() : null,
+        scheduledAt: isScheduled ? new Date(scheduledAt) : null,
         authorId: session.user.id,
         categoryId: categoryId || null,
+        seriesId: seriesId || null,
+        seriesOrder: seriesOrder || null,
         tags: finalTagIds.length
           ? {
               create: finalTagIds.map((tagId: string) => ({
@@ -148,7 +158,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: post,
-      message: "文章创建成功",
+      message: isScheduled ? "文章已设置定时发布" : "文章创建成功",
     });
   } catch (error) {
     console.error("Create post error:", error);

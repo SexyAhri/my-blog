@@ -12,6 +12,7 @@ import {
   FileSearchOutlined,
   MessageOutlined,
   BarChartOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -42,6 +43,11 @@ const menuItems: MenuItem[] = [
     key: "/admin/tags",
     icon: <TagsOutlined />,
     label: <Link href="/admin/tags">标签管理</Link>,
+  },
+  {
+    key: "/admin/series",
+    icon: <BookOutlined />,
+    label: <Link href="/admin/series">系列管理</Link>,
   },
   {
     key: "/admin/media",

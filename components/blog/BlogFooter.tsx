@@ -75,6 +75,9 @@ export default function BlogFooter() {
                 <Link href="/about">关于</Link>
               </li>
               <li>
+                <Link href="/privacy">隐私政策</Link>
+              </li>
+              <li>
                 <Link href="/feed.xml">RSS</Link>
               </li>
             </ul>

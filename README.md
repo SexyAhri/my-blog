@@ -12,6 +12,8 @@
 - **数据库**: PostgreSQL + Prisma
 - **认证**: NextAuth.js
 - **编辑器**: TipTap
+- **代码高亮**: Prism.js
+- **邮件**: Resend
 - **部署**: Docker + Watchtower
 
 ## 功能特性
@@ -19,18 +21,30 @@
 ### 博客前台
 
 - 文章列表、详情、目录导航
+- 阅读时间估算
+- 代码语法高亮
+- 图片懒加载 + 点击放大
+- 文章点赞
+- 文章分享（Twitter、微博、微信、复制链接）
+- 返回顶部按钮
 - 分类、标签、归档
+- 文章系列/专栏
 - 全文搜索
-- 评论系统（支持审核）
+- 评论系统（支持审核、回复通知）
 - RSS 订阅 & Sitemap
 - Google Analytics 统计
+- SEO 优化（JSON-LD 结构化数据、Open Graph、Twitter Cards）
+- 隐私政策页面
 - 响应式设计
 
 ### 后台管理
 
 - 仪表盘数据统计
-- 文章管理（富文本编辑器）
-- 分类 / 标签管理
+- 文章管理（富文本编辑器、Markdown 快捷键）
+- 定时发布
+- 草稿预览
+- 批量操作（发布、删除）
+- 分类 / 标签 / 系列管理
 - 媒体库（图片上传）
 - 评论管理
 - 访问统计
@@ -77,10 +91,17 @@ DATABASE_URL="postgresql://user:password@host:5432/myblog"
 NEXTAUTH_SECRET="your-secret-key"
 NEXTAUTH_URL="http://localhost:5177"
 
-# Seed 脚本使用（可选）
+# 管理员账号（Seed 脚本使用）
 ADMIN_EMAIL="admin@example.com"
 ADMIN_NAME="Admin"
 ADMIN_PASSWORD="your-password"
+
+# 邮件通知（可选）
+RESEND_API_KEY="re_xxxxxxxxxxxx"
+NEXT_PUBLIC_SITE_URL="https://your-domain.com"
+
+# 定时发布（可选）
+CRON_SECRET="your-cron-secret"
 ```
 
 ## Docker 部署
@@ -100,6 +121,8 @@ services:
       - DATABASE_URL=postgresql://user:pass@host:5432/myblog
       - NEXTAUTH_SECRET=your-secret
       - NEXTAUTH_URL=https://your-domain.com
+      - RESEND_API_KEY=re_xxxxxxxxxxxx
+      - NEXT_PUBLIC_SITE_URL=https://your-domain.com
     volumes:
       - ./uploads:/app/public/uploads
 
@@ -111,7 +134,7 @@ services:
       - DOCKER_API_VERSION=1.44
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 300 --cleanup
+    command: --interval 300 --cleanup vixenahri-blog
 ```
 
 ```bash

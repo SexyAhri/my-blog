@@ -25,6 +25,9 @@ export async function GET(
             },
           },
         },
+        series: {
+          select: { id: true, name: true, slug: true },
+        },
       },
     });
 
@@ -34,12 +37,6 @@ export async function GET(
         { status: 404 },
       );
     }
-
-    // 增加浏览量
-    await prisma.post.update({
-      where: { id: post.id },
-      data: { viewCount: { increment: 1 } },
-    });
 
     // 获取上一篇和下一篇
     const [prevPost, nextPost] = await Promise.all([
@@ -84,6 +81,24 @@ export async function GET(
       },
     });
 
+    // 获取系列文章
+    let seriesPosts: any[] = [];
+    if (post.seriesId) {
+      seriesPosts = await prisma.post.findMany({
+        where: {
+          seriesId: post.seriesId,
+          published: true,
+        },
+        orderBy: { seriesOrder: "asc" },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          seriesOrder: true,
+        },
+      });
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -91,6 +106,7 @@ export async function GET(
         prevPost,
         nextPost,
         relatedPosts,
+        seriesPosts,
       },
     });
   } catch (error) {
