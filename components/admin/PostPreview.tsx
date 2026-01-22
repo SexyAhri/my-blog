@@ -1,6 +1,7 @@
 "use client";
 
 import { Modal, Typography, Tag, Space, Divider } from "antd";
+import { useMemo, useEffect } from "react";
 import {
   CalendarOutlined,
   UserOutlined,
@@ -8,8 +9,41 @@ import {
   TagOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
+import { marked, Renderer } from "marked";
+import Prism from "prismjs";
+import "prismjs/themes/prism-tomorrow.css";
+import "prismjs/components/prism-javascript";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-jsx";
+import "prismjs/components/prism-tsx";
+import "prismjs/components/prism-css";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-bash";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-yaml";
+import "prismjs/components/prism-markdown";
+import "prismjs/components/prism-docker";
 
-const { Title, Paragraph, Text } = Typography;
+// 配置 marked
+const renderer = new Renderer();
+renderer.code = function({ text, lang }: { text: string; lang?: string }) {
+  const language = lang || '';
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+  return `<pre><code class="language-${language}">${escaped}</code></pre>`;
+};
+
+marked.setOptions({
+  renderer,
+  gfm: true,
+  breaks: true,
+});
+
+const { Title, Text } = Typography;
 
 interface PostPreviewProps {
   open: boolean;
@@ -28,6 +62,55 @@ interface PostPreviewProps {
 }
 
 export default function PostPreview({ open, onClose, post }: PostPreviewProps) {
+  // 解析内容
+  const renderedContent = useMemo(() => {
+    if (!post?.content) return "";
+
+    let content = post.content;
+    
+    // 检查内容是否是被 <p> 包裹的 Markdown
+    const isWrappedMarkdown = /<p>\s*#{1,6}\s/i.test(content) || /<p>\s*```/.test(content) || /<p>\s*-\s/.test(content);
+    
+    if (isWrappedMarkdown) {
+      content = content
+        .replace(/<p>/gi, '')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .trim();
+    }
+    
+    // 清理代码块内被自动转换的链接
+    content = content.replace(/```([\s\S]*?)```/g, (_, code) => {
+      const cleanCode = code.replace(/<a[^>]*>([^<]*)<\/a>/gi, '$1');
+      return '```' + cleanCode + '```';
+    });
+    
+    // 判断是否需要用 marked 解析
+    const hasRealHtmlStructure = /<(h[1-6]|ul|ol|blockquote|pre|table)[^>]*>/i.test(content);
+    const looksLikeMarkdown = /^#{1,6}\s/m.test(content) || /```[\s\S]*?```/.test(content);
+    
+    const shouldParseAsMarkdown = looksLikeMarkdown && !hasRealHtmlStructure;
+    
+    let html = shouldParseAsMarkdown ? (marked(content) as string) : content;
+    
+    // 如果不是 Markdown，也要清理 <pre><code> 内的链接
+    if (!shouldParseAsMarkdown) {
+      html = html.replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, (match, code) => {
+        const cleanCode = code.replace(/<a[^>]*>([^<]*)<\/a>/gi, '$1');
+        return match.replace(code, cleanCode);
+      });
+    }
+
+    return html;
+  }, [post?.content]);
+
+  // 代码高亮
+  useEffect(() => {
+    if (open && renderedContent) {
+      setTimeout(() => Prism.highlightAll(), 100);
+    }
+  }, [open, renderedContent]);
+
   return (
     <Modal
       open={open}
@@ -76,7 +159,7 @@ export default function PostPreview({ open, onClose, post }: PostPreviewProps) {
 
         {/* 元信息 */}
         <Space
-          split={<Divider type="vertical" />}
+          separator={<Divider orientation="vertical" />}
           style={{ marginBottom: 24, color: "#666" }}
         >
           {post.author && (
@@ -146,8 +229,8 @@ export default function PostPreview({ open, onClose, post }: PostPreviewProps) {
 
         {/* 正文内容 */}
         <div
-          className="post-preview-content"
-          dangerouslySetInnerHTML={{ __html: post.content }}
+          className="post-preview-content post-detail-content"
+          dangerouslySetInnerHTML={{ __html: renderedContent }}
           style={{
             fontSize: 16,
             lineHeight: 1.8,

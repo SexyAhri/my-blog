@@ -91,6 +91,7 @@ export function FormDrawer({
       open={open}
       onClose={onClose}
       forceRender
+      destroyOnClose={false}
       styles={{
         wrapper: { width: isFullscreen ? "100vw" : width },
         header: {

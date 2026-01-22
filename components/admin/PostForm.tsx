@@ -39,7 +39,6 @@ interface PostFormProps {
 
 export default function PostForm({ post }: PostFormProps) {
   const router = useRouter();
-  const [form] = Form.useForm();
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState(post?.content || "");
@@ -55,6 +54,8 @@ export default function PostForm({ post }: PostFormProps) {
   const lastSavedRef = useRef<string>("");
   const [previewVisible, setPreviewVisible] = useState(false);
   const [showSchedule, setShowSchedule] = useState(!!post?.scheduledAt);
+  const [previewData, setPreviewData] = useState<any>(null);
+  const formRef = useRef<any>(null);
 
   useEffect(() => {
     loadCategories();
@@ -83,9 +84,9 @@ export default function PostForm({ post }: PostFormProps) {
   }, [content]);
 
   const autoSaveDraft = async () => {
-    if (!post) return;
+    if (!post || !formRef.current) return;
     try {
-      const values = form.getFieldsValue();
+      const values = formRef.current.getFieldsValue();
       const currentData = JSON.stringify({ ...values, content });
       if (currentData === lastSavedRef.current) return;
       setAutoSaveStatus("saving");
@@ -208,7 +209,27 @@ export default function PostForm({ post }: PostFormProps) {
         <Space>
           <Button
             icon={<EyeOutlined />}
-            onClick={() => setPreviewVisible(true)}
+            onClick={() => {
+              if (formRef.current) {
+                setPreviewData({
+                  title: formRef.current.getFieldValue("title") || "无标题",
+                  content: content || "<p>暂无内容</p>",
+                  excerpt: formRef.current.getFieldValue("excerpt"),
+                  coverImage: coverImage,
+                  category: categories.find(
+                    (c) => c.id === formRef.current.getFieldValue("categoryId"),
+                  ),
+                  tags: formRef.current
+                    .getFieldValue("tagIds")
+                    ?.map((id: string) => ({ tag: tags.find((t) => t.id === id) }))
+                    .filter((t: any) => t.tag),
+                  author: post?.author || { name: "当前用户", email: "" },
+                  createdAt: post?.createdAt || new Date().toISOString(),
+                  viewCount: post?.viewCount || 0,
+                });
+              }
+              setPreviewVisible(true);
+            }}
           >
             预览
           </Button>
@@ -216,7 +237,7 @@ export default function PostForm({ post }: PostFormProps) {
             type="primary"
             icon={<SaveOutlined />}
             loading={loading}
-            onClick={() => form.submit()}
+            onClick={() => formRef.current?.submit()}
           >
             {post ? "更新" : "发布"}
           </Button>
@@ -224,7 +245,7 @@ export default function PostForm({ post }: PostFormProps) {
       </div>
 
       <Form
-        form={form}
+        ref={formRef}
         layout="vertical"
         onFinish={handleSubmit}
         initialValues={{
@@ -260,9 +281,9 @@ export default function PostForm({ post }: PostFormProps) {
                 style={{ fontSize: 24, fontWeight: 600, padding: 0 }}
                 onChange={(e) => {
                   const title = e.target.value;
-                  if (!post) {
+                  if (!post && formRef.current) {
                     const slug = generateSlug(title);
-                    form.setFieldValue("slug", slug);
+                    formRef.current.setFieldValue("slug", slug);
                   }
                 }}
               />
@@ -414,18 +435,9 @@ export default function PostForm({ post }: PostFormProps) {
       <PostPreview
         open={previewVisible}
         onClose={() => setPreviewVisible(false)}
-        post={{
-          title: form.getFieldValue("title") || "无标题",
-          content: content || "<p>暂无内容</p>",
-          excerpt: form.getFieldValue("excerpt"),
-          coverImage: coverImage,
-          category: categories.find(
-            (c) => c.id === form.getFieldValue("categoryId"),
-          ),
-          tags: form
-            .getFieldValue("tagIds")
-            ?.map((id: string) => ({ tag: tags.find((t) => t.id === id) }))
-            .filter((t: any) => t.tag),
+        post={previewData || {
+          title: "无标题",
+          content: "<p>暂无内容</p>",
           author: post?.author || { name: "当前用户", email: "" },
           createdAt: post?.createdAt || new Date().toISOString(),
           viewCount: post?.viewCount || 0,
