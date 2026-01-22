@@ -29,6 +29,8 @@ services:
       # 应用配置
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=5177
+      # 安全入口密钥
+      - NEXT_PUBLIC_ADMIN_ACCESS_KEY=${NEXT_PUBLIC_ADMIN_ACCESS_KEY:-VxAhri}
     # 使用 host 网络模式访问宿主机数据库
     network_mode: "host"
     # 或者使用 extra_hosts（如果不想用 host 模式）
