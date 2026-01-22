@@ -185,6 +185,14 @@ export default function SeriesPage() {
             color="#1890ff"
           />
         </Col>
+        <Col xs={24} sm={8}>
+          <MetricCard
+            title="平均文章数"
+            value={series.length > 0 ? (series.reduce((sum, s) => sum + s._count.posts, 0) / series.length).toFixed(1) : 0}
+            icon={<BookOutlined />}
+            color="#52c41a"
+          />
+        </Col>
       </Row>
 
       <DataTable
