@@ -421,8 +421,9 @@
 }
 
 .blog-aside {
-    width: 260px;
+    width: 340px;
     flex-shrink: 0;
+    min-width: 0;
     padding-top: 0;
     position: sticky;
     top: 80px;
@@ -761,6 +762,8 @@
 .blog-sidebar-list {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
 }
 
 .blog-sidebar-item {
@@ -773,6 +776,8 @@
     font-size: 14px;
     transition: all 0.2s ease;
     border-bottom: 1px solid transparent;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .blog-sidebar-item:not(:last-child) {
@@ -794,11 +799,13 @@
 
 .blog-sidebar-post-title {
     flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-weight: 400;
     margin-right: 12px;
+    max-width: 100%;
 }
 
 .blog-sidebar-date {
@@ -972,6 +979,13 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+    width: 100%;
+}
+
+.blog-sidebar-hot-item .blog-sidebar-post-title {
+    width: 100%;
+    max-width: 100%;
+    display: block;
 }
 
 /* ========================================
@@ -1509,7 +1523,7 @@
    ======================================== */
 @media (max-width: 1024px) {
     .blog-aside {
-        width: 240px;
+        width: 280px;
         top: 80px;
     }
 
