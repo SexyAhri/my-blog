@@ -224,6 +224,78 @@ const chineseToEnglish: Record<string, string> = {
   "面试": "interview",
   "算法": "algorithm",
   "数据结构": "data-structure",
+
+  // ========== content 系列文章标签/分类补充 ==========
+  // 系列名（分类用）
+  "技术": "tech",
+  "生活": "life",
+
+  // Next.js / React / Vue 系列常用
+  "国际化": "internationalization",
+  "流式": "streaming",
+  "生态": "ecosystem",
+  "数据获取": "data-fetching",
+  "数据请求": "data-request",
+  "项目结构": "project-structure",
+  "错误处理": "error-handling",
+  "错误边界": "error-boundaries",
+  "图片": "image",
+  "字体": "font",
+  "无障碍": "accessibility",
+  "速查": "cheatsheet",
+  "表单": "forms",
+
+  // Vue 系列
+  "插槽": "slots",
+  "依赖注入": "dependency-injection",
+  "计算属性": "computed",
+  "侦听器": "watcher",
+  "条件": "conditional",
+  "列表": "list",
+  "自定义指令": "directives",
+  "组合式函数": "composables",
+  "渲染函数": "render-function",
+  "虚拟DOM": "virtual-dom",
+  "编译器宏": "compiler-macros",
+
+  // TypeScript 系列
+  "类型断言": "type-assertion",
+  "类型收窄": "type-narrowing",
+  "类型注解": "type-annotation",
+  "类型推导": "type-inference",
+  "类型别名": "type-alias",
+  "映射类型": "mapped-types",
+  "条件类型": "conditional-types",
+  "声明文件": "declaration-files",
+  "报错": "errors",
+  "排查": "troubleshooting",
+  "新特性": "new-features",
+  "类型兼容性": "type-compatibility",
+  "类型体操": "type-gymnastics",
+
+  // JavaScript 系列
+  "位运算": "bitwise",
+  "权限": "permissions",
+  "工具函数": "utility-functions",
+  "防抖": "debounce",
+  "节流": "throttle",
+  "深拷贝": "deep-clone",
+  "本地化": "localization",
+  "内存": "memory",
+  "垃圾回收": "gc",
+  "正则表达式": "regex",
+  "闭包": "closure",
+  "作用域": "scope",
+  "原型": "prototype",
+  "继承": "inheritance",
+  "可选链": "optional-chaining",
+
+  // CSS 系列
+  "溢出": "overflow",
+  "滚动": "scroll",
+  "滚动吸附": "scroll-snap",
+  "轮播": "carousel",
+  "宽高比": "aspect-ratio",
 };
 
 // 翻译中文为英文

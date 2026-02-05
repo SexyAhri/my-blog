@@ -1,6 +1,6 @@
 "use client";
 
-import { Modal, Typography, Tag, Space, Divider } from "antd";
+import { Modal, Typography, Tag, Space, Divider, App } from "antd";
 import { useMemo, useEffect } from "react";
 import {
   CalendarOutlined,
@@ -11,7 +11,7 @@ import {
 } from "@ant-design/icons";
 import { marked, Renderer } from "marked";
 import Prism from "prismjs";
-import "prismjs/themes/prism-tomorrow.css";
+import "prismjs/themes/prism.css";
 import "prismjs/components/prism-javascript";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-jsx";
@@ -24,7 +24,10 @@ import "prismjs/components/prism-yaml";
 import "prismjs/components/prism-markdown";
 import "prismjs/components/prism-docker";
 
-// 配置 marked
+// 复制按钮 SVG（与前台 PostContent 一致）
+const copyIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+
+// 配置 marked（与前台 PostContent 一致的代码块结构：macOS 风格头部 + 复制按钮）
 const renderer = new Renderer();
 renderer.code = function({ text, lang }: { text: string; lang?: string }) {
   const language = lang || '';
@@ -34,7 +37,17 @@ renderer.code = function({ text, lang }: { text: string; lang?: string }) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
-  return `<pre><code class="language-${language}">${escaped}</code></pre>`;
+  return `<div class="code-block-wrapper">
+    <div class="code-block-header">
+      <span class="code-block-dots">
+        <span class="dot dot-red"></span>
+        <span class="dot dot-yellow"></span>
+        <span class="dot dot-green"></span>
+      </span>
+      <button class="code-block-copy" type="button" title="复制代码" aria-label="复制代码">${copyIconSvg}</button>
+    </div>
+    <pre><code class="language-${language}">${escaped}</code></pre>
+  </div>`;
 };
 
 marked.setOptions({
@@ -62,6 +75,8 @@ interface PostPreviewProps {
 }
 
 export default function PostPreview({ open, onClose, post }: PostPreviewProps) {
+  const { message } = App.useApp();
+
   // 解析内容
   const renderedContent = useMemo(() => {
     if (!post?.content) return "";
@@ -110,6 +125,25 @@ export default function PostPreview({ open, onClose, post }: PostPreviewProps) {
       setTimeout(() => Prism.highlightAll(), 100);
     }
   }, [open, renderedContent]);
+
+  // 代码块复制按钮（与前台 PostContent 一致）
+  useEffect(() => {
+    const handleCopy = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.code-block-copy');
+      if (!target) return;
+      const wrapper = (target as HTMLElement).closest('.code-block-wrapper');
+      if (!wrapper) return;
+      const codeEl = wrapper.querySelector('pre code') || wrapper.querySelector('pre');
+      const text = codeEl?.textContent || '';
+      navigator.clipboard.writeText(text).then(() => {
+        message.success('已复制到剪贴板');
+      }).catch(() => {
+        message.error('复制失败');
+      });
+    };
+    document.addEventListener('click', handleCopy);
+    return () => document.removeEventListener('click', handleCopy);
+  }, [message]);
 
   return (
     <Modal
