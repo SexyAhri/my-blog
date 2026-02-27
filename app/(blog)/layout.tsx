@@ -3,23 +3,29 @@ import BlogHeader from "@/components/blog/BlogHeader";
 import BlogFooter from "@/components/blog/BlogFooter";
 import Analytics from "@/components/blog/Analytics";
 import { prisma } from "@/lib/prisma";
+import { cache } from "react";
 
 const SITE_URL = "https://blog.vixenahri.cn";
 
+// React cache 去重：generateMetadata 和 BlogLayout 共享同一次查询
+const getSiteSettings = cache(async () => {
+  const settings = await prisma.setting.findMany({
+    where: {
+      key: {
+        in: ["siteName", "siteDescription", "siteKeywords", "siteUrl"],
+      },
+    },
+  });
+  const map: Record<string, string> = {};
+  settings.forEach((s) => {
+    map[s.key] = s.value;
+  });
+  return map;
+});
+
 export async function generateMetadata(): Promise<Metadata> {
   try {
-    const settings = await prisma.setting.findMany({
-      where: {
-        key: {
-          in: ["siteName", "siteDescription", "siteKeywords", "siteUrl"],
-        },
-      },
-    });
-
-    const settingsMap: Record<string, string> = {};
-    settings.forEach((s) => {
-      settingsMap[s.key] = s.value;
-    });
+    const settingsMap = await getSiteSettings();
 
     const siteUrl = settingsMap.siteUrl || SITE_URL;
 
@@ -84,15 +90,11 @@ export default async function BlogLayout({
   // 获取网站设置用于 JSON-LD
   let siteName = "VixenAhri Blog";
   let siteDescription = "VixenAhri 的个人博客";
-  
+
   try {
-    const settings = await prisma.setting.findMany({
-      where: { key: { in: ["siteName", "siteDescription"] } },
-    });
-    settings.forEach((s) => {
-      if (s.key === "siteName") siteName = s.value;
-      if (s.key === "siteDescription") siteDescription = s.value;
-    });
+    const settingsMap = await getSiteSettings();
+    siteName = settingsMap.siteName || siteName;
+    siteDescription = settingsMap.siteDescription || siteDescription;
   } catch {
     // 使用默认值
   }
@@ -124,9 +126,7 @@ export default async function BlogLayout({
     "@type": "Person",
     name: "VixenAhri",
     url: SITE_URL,
-    sameAs: [
-      "https://github.com/SexyAhri",
-    ],
+    sameAs: ["https://github.com/SexyAhri"],
   };
 
   return (

@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import PostContent from "./PostContent";
 
 interface Props {
@@ -9,23 +10,22 @@ interface Props {
 
 const SITE_URL = "https://blog.vixenahri.cn";
 
+// React cache 去重：generateMetadata 和 PostPage 共享同一次查询
+const getPost = cache(async (slug: string) => {
+  return prisma.post.findUnique({
+    where: { slug, published: true },
+    include: {
+      author: { select: { name: true, image: true } },
+      category: { select: { name: true, slug: true } },
+      tags: { include: { tag: true } },
+    },
+  });
+});
+
 // 生成动态 SEO 元数据
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-
-  const post = await prisma.post.findUnique({
-    where: { slug, published: true },
-    select: {
-      title: true,
-      excerpt: true,
-      coverImage: true,
-      publishedAt: true,
-      updatedAt: true,
-      author: { select: { name: true } },
-      tags: { include: { tag: true } },
-      category: { select: { name: true } },
-    },
-  });
+  const post = await getPost(slug);
 
   if (!post) {
     return { title: "文章不存在" };
@@ -35,7 +35,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const canonicalUrl = `${SITE_URL}/posts/${slug}`;
   const cover: string | null = post.coverImage ?? null;
   const coverImageUrl = cover
-    ? (cover.startsWith("http") ? cover : `${SITE_URL}${cover}`)
+    ? cover.startsWith("http")
+      ? cover
+      : `${SITE_URL}${cover}`
     : `${SITE_URL}/og-default.png`;
 
   return {
@@ -79,31 +81,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PostPage({ params }: Props) {
   const { slug } = await params;
-
-  // 获取完整文章数据用于 JSON-LD
-  const post = await prisma.post.findUnique({
-    where: { slug, published: true },
-    include: {
-      author: { select: { name: true, image: true } },
-      category: { select: { name: true, slug: true } },
-      tags: { include: { tag: true } },
-    },
-  });
+  const post = await getPost(slug);
 
   if (!post) {
     notFound();
   }
 
-  // 增加浏览量
-  await prisma.post.update({
-    where: { id: post.id },
-    data: { viewCount: { increment: 1 } },
-  });
+  // 增加浏览量（不阻塞渲染）
+  prisma.post
+    .update({
+      where: { id: post.id },
+      data: { viewCount: { increment: 1 } },
+    })
+    .catch(() => {});
 
   // JSON-LD 结构化数据
   const cover: string | null = post.coverImage ?? null;
   const coverImageUrl = cover
-    ? (cover.startsWith("http") ? cover : `${SITE_URL}${cover}`)
+    ? cover.startsWith("http")
+      ? cover
+      : `${SITE_URL}${cover}`
     : `${SITE_URL}/og-default.png`;
 
   const jsonLd = {
