@@ -1,18 +1,14 @@
 "use client";
 
-import { Layout, theme, App } from "antd";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
-import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { App, Layout, Spin, theme } from "antd";
+import { signOut, useSession } from "next-auth/react";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { Spin } from "antd";
+import { Footer } from "@/components/layout/Footer";
+import { Header } from "@/components/layout/Header";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 const { Content } = Layout;
-
-// 安全入口密钥
 const ADMIN_ACCESS_KEY = process.env.NEXT_PUBLIC_ADMIN_ACCESS_KEY;
 
 export default function DashboardLayout({
@@ -27,67 +23,74 @@ export default function DashboardLayout({
   const { message } = App.useApp();
   const hasCheckedAccess = useRef(false);
 
-  // 判断是否是文章编辑页面
   const isPostEditPage =
     pathname.includes("/posts/") &&
     (pathname.includes("/edit") || pathname.includes("/new"));
 
-  // 验证安全入口
   useEffect(() => {
     if (hasCheckedAccess.current) return;
     hasCheckedAccess.current = true;
 
-    // 如果配置了安全密钥，检查 sessionStorage
     if (ADMIN_ACCESS_KEY) {
       const storedKey = sessionStorage.getItem("admin_access_key");
       if (storedKey !== ADMIN_ACCESS_KEY) {
-        // 未通过安全入口，重定向到首页
         router.replace("/");
-        return;
       }
     }
   }, [router]);
 
-  // Session 过期检测
   useEffect(() => {
     if (status === "unauthenticated") {
-      message.warning("登录已过期，请重新登录");
+      message.warning("Session expired");
       router.push("/admin/login");
     }
-  }, [status, router, message]);
+  }, [message, router, status]);
 
-  // 定期检查 session 状态
+  useEffect(() => {
+    if (status === "authenticated" && session?.user?.role !== "admin") {
+      message.error("Admin access required");
+      signOut({ redirect: false });
+      router.push("/");
+    }
+  }, [message, router, session, status]);
+
   useEffect(() => {
     const checkSession = async () => {
       try {
         const res = await fetch("/api/auth/session");
         const data = await res.json();
         if (!data?.user) {
-          message.warning("登录已过期，请重新登录");
+          message.warning("Session expired");
           signOut({ redirect: false });
           router.push("/admin/login");
+          return;
+        }
+
+        if (data.user.role !== "admin") {
+          message.error("Admin access required");
+          signOut({ redirect: false });
+          router.push("/");
         }
       } catch (error) {
         console.error("Session check error:", error);
       }
     };
 
-    // 每 5 分钟检查一次
     const interval = setInterval(checkSession, 5 * 60 * 1000);
-    
-    // 页面可见时也检查
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         checkSession();
       }
     };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [router, message]);
+  }, [message, router]);
 
   if (status === "loading") {
     return (
@@ -105,7 +108,7 @@ export default function DashboardLayout({
     );
   }
 
-  if (!session) {
+  if (!session || session.user.role !== "admin") {
     return null;
   }
 

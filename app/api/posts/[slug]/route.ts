@@ -1,10 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
 import { cache, CACHE_TTL } from "@/lib/cache";
+import { getPublishedPostDetail } from "@/lib/posts";
 
-// GET - 根据 slug 获取文章详情（前台）
 export async function GET(
-  request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
@@ -14,113 +13,23 @@ export async function GET(
     const result = await cache.cached(
       cacheKey,
       async () => {
-        const post = await prisma.post.findUnique({
-          where: { slug, published: true },
-          include: {
-            author: {
-              select: { id: true, name: true, email: true },
-            },
-            category: {
-              select: { id: true, name: true, slug: true },
-            },
-            tags: {
-              include: {
-                tag: {
-                  select: { id: true, name: true, slug: true },
-                },
-              },
-            },
-            series: {
-              select: { id: true, name: true, slug: true },
-            },
-          },
-        });
-
+        const post = await getPublishedPostDetail(slug);
         if (!post) {
-          return { success: false, error: "文章不存在", status: 404 };
-        }
-
-        // 获取上一篇和下一篇
-        const [prevPost, nextPost] = await Promise.all([
-          post.publishedAt
-            ? prisma.post.findFirst({
-                where: {
-                  published: true,
-                  publishedAt: { lt: post.publishedAt },
-                },
-                orderBy: { publishedAt: "desc" },
-                select: { id: true, title: true, slug: true },
-              })
-            : null,
-          post.publishedAt
-            ? prisma.post.findFirst({
-                where: {
-                  published: true,
-                  publishedAt: { gt: post.publishedAt },
-                },
-                orderBy: { publishedAt: "asc" },
-                select: { id: true, title: true, slug: true },
-              })
-            : null,
-        ]);
-
-        // 获取相关文章（同分类）
-        const relatedPosts = post.categoryId
-          ? await prisma.post.findMany({
-              where: {
-                published: true,
-                categoryId: post.categoryId,
-                NOT: { id: post.id },
-              },
-              take: 5,
-              orderBy: { publishedAt: "desc" },
-              select: {
-                id: true,
-                title: true,
-                slug: true,
-                excerpt: true,
-                coverImage: true,
-                publishedAt: true,
-              },
-            })
-          : [];
-
-        // 获取系列文章
-        let seriesPosts: any[] = [];
-        if (post.seriesId) {
-          seriesPosts = await prisma.post.findMany({
-            where: {
-              seriesId: post.seriesId,
-              published: true,
-            },
-            orderBy: { seriesOrder: "asc" },
-            select: {
-              id: true,
-              title: true,
-              slug: true,
-              seriesOrder: true,
-            },
-          });
+          return { success: false, error: "Article not found", status: 404 };
         }
 
         return {
           success: true,
-          data: {
-            ...post,
-            prevPost,
-            nextPost,
-            relatedPosts,
-            seriesPosts,
-          },
+          data: post,
         };
       },
-      CACHE_TTL.MEDIUM // 1分钟缓存
+      CACHE_TTL.MEDIUM,
     );
 
     if (result.status === 404) {
       return NextResponse.json(
         { success: false, error: result.error },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -133,7 +42,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "获取文章失败",
+        error: error instanceof Error ? error.message : "Failed to load post",
       },
       { status: 500 },
     );

@@ -1,22 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/admin";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: "未授权" },
-        { status: 401 },
-      );
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
     }
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status"); // pending, approved, all
+    const status = searchParams.get("status");
+    const where: { approved?: boolean } = {};
 
-    const where: any = {};
     if (status === "pending") {
       where.approved = false;
     } else if (status === "approved") {
@@ -32,9 +28,9 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, data: comments });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { success: false, error: "获取评论失败" },
+      { success: false, error: "Failed to fetch comments" },
       { status: 500 },
     );
   }

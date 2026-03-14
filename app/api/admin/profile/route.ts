@@ -1,17 +1,16 @@
+import { compare, hash } from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { hash, compare } from "bcryptjs";
+import { requireAdmin } from "@/lib/admin";
 
-// GET - 获取当前用户信息
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "未授权" }, { status: 401 });
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
     }
 
+    const session = admin.session!;
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: {
@@ -25,27 +24,30 @@ export async function GET() {
     });
 
     if (!user) {
-      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({ success: true, data: user });
   } catch (error) {
     console.error("Failed to fetch profile:", error);
     return NextResponse.json(
-      { success: false, error: "获取用户信息失败" },
+      { success: false, error: "Failed to fetch profile" },
       { status: 500 },
     );
   }
 }
 
-// PUT - 更新用户信息
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "未授权" }, { status: 401 });
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
     }
 
+    const session = admin.session!;
     const body = await request.json();
     const { name, image, currentPassword, newPassword } = body;
 
@@ -54,11 +56,13 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 },
+      );
     }
 
-    // 准备更新数据
-    const updateData: any = {};
+    const updateData: Record<string, string | null> = {};
 
     if (name) {
       updateData.name = name;
@@ -68,11 +72,10 @@ export async function PUT(request: NextRequest) {
       updateData.image = image || null;
     }
 
-    // 如果要修改密码
     if (newPassword) {
       if (!currentPassword) {
         return NextResponse.json(
-          { success: false, error: "请输入当前密码" },
+          { success: false, error: "Current password is required" },
           { status: 400 },
         );
       }
@@ -80,14 +83,14 @@ export async function PUT(request: NextRequest) {
       const isPasswordValid = await compare(currentPassword, user.password);
       if (!isPasswordValid) {
         return NextResponse.json(
-          { success: false, error: "当前密码错误" },
+          { success: false, error: "Current password is incorrect" },
           { status: 400 },
         );
       }
 
       if (newPassword.length < 6) {
         return NextResponse.json(
-          { success: false, error: "新密码至少6位" },
+          { success: false, error: "New password must be at least 6 characters" },
           { status: 400 },
         );
       }
@@ -111,7 +114,7 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error("Failed to update profile:", error);
     return NextResponse.json(
-      { success: false, error: "更新失败" },
+      { success: false, error: "Failed to update profile" },
       { status: 500 },
     );
   }

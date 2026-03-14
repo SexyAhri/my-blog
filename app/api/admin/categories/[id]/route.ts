@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateSlug } from "@/lib/utils";
+import { invalidateTaxonomyCaches } from "@/lib/cache";
+import { requireAdmin } from "@/lib/admin";
 
-// PUT - 更新分类
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: "未授权" },
-        { status: 401 },
-      );
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
     }
 
     const { id } = await params;
@@ -24,22 +20,22 @@ export async function PUT(
 
     if (!name || !slug) {
       return NextResponse.json(
-        { success: false, error: "名称和 slug 不能为空" },
+        { success: false, error: "Name and slug are required" },
         { status: 400 },
       );
     }
 
-    // 检查 slug 是否被其他分类使用
+    const finalSlug = generateSlug(slug);
     const existing = await prisma.category.findFirst({
       where: {
-        slug,
+        slug: finalSlug,
         NOT: { id },
       },
     });
 
     if (existing) {
       return NextResponse.json(
-        { success: false, error: "URL 别名已被使用" },
+        { success: false, error: "Slug already exists" },
         { status: 400 },
       );
     }
@@ -48,44 +44,41 @@ export async function PUT(
       where: { id },
       data: {
         name,
-        slug: generateSlug(slug),
+        slug: finalSlug,
         description,
       },
     });
 
+    invalidateTaxonomyCaches();
+
     return NextResponse.json({
       success: true,
       data: category,
-      message: "分类更新成功",
+      message: "Category updated",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "更新分类失败",
+        error:
+          error instanceof Error ? error.message : "Failed to update category",
       },
       { status: 500 },
     );
   }
 }
 
-// DELETE - 删除分类
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: "未授权" },
-        { status: 401 },
-      );
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
     }
 
     const { id } = await params;
-
-    // 检查是否有文章使用此分类
     const postsCount = await prisma.post.count({
       where: { categoryId: id },
     });
@@ -94,7 +87,7 @@ export async function DELETE(
       return NextResponse.json(
         {
           success: false,
-          error: `无法删除，还有 ${postsCount} 篇文章使用此分类`,
+          error: `Category is still used by ${postsCount} posts`,
         },
         { status: 400 },
       );
@@ -104,15 +97,18 @@ export async function DELETE(
       where: { id },
     });
 
+    invalidateTaxonomyCaches();
+
     return NextResponse.json({
       success: true,
-      message: "分类删除成功",
+      message: "Category deleted",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "删除分类失败",
+        error:
+          error instanceof Error ? error.message : "Failed to delete category",
       },
       { status: 500 },
     );

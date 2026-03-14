@@ -6,7 +6,7 @@
     "dev": "next dev -p 5177",
     "build": "next build",
     "start": "next start -p 5177",
-    "lint": "next lint",
+    "lint": "eslint . --max-warnings=0",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
@@ -31,6 +31,7 @@
     "antd": "^6.2.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
+    "isomorphic-dompurify": "^3.3.0",
     "markdown-it": "^14.1.0",
     "marked": "^17.0.1",
     "next": "16.0.0",
@@ -49,6 +50,8 @@
     "@types/node": "^20.14.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.1.6",
     "prisma": "5.22.0",
     "tsx": "^4.21.0"
   }

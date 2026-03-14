@@ -1,64 +1,53 @@
-// 定时发布调度器
-// 在服务端启动时运行，每分钟检查一次待发布的文章
+import { prisma } from "@/lib/prisma";
+import { invalidatePostCaches } from "@/lib/cache";
 
-let isRunning = false;
-let intervalId: NodeJS.Timeout | null = null;
+export interface PublishedPostResult {
+  id: string;
+  title: string;
+  slug: string;
+}
 
-export async function checkScheduledPosts() {
-  if (typeof window !== "undefined") return; // 只在服务端运行
-  
-  try {
-    const { prisma } = await import("@/lib/prisma");
-    const now = new Date();
-
-    const postsToPublish = await prisma.post.findMany({
-      where: {
-        published: false,
-        scheduledAt: {
-          lte: now,
-          not: null,
-        },
+export async function publishScheduledPosts(
+  now = new Date(),
+): Promise<PublishedPostResult[]> {
+  const postsToPublish = await prisma.post.findMany({
+    where: {
+      published: false,
+      scheduledAt: {
+        lte: now,
+        not: null,
       },
-    });
+    },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      scheduledAt: true,
+    },
+  });
 
-    if (postsToPublish.length > 0) {
-      console.log(`[Scheduler] Found ${postsToPublish.length} posts to publish`);
-      
-      for (const post of postsToPublish) {
-        await prisma.post.update({
-          where: { id: post.id },
-          data: {
-            published: true,
-            publishedAt: post.scheduledAt,
-            scheduledAt: null,
-          },
-        });
-        console.log(`[Scheduler] Published: ${post.title}`);
-      }
-    }
-  } catch (error) {
-    console.error("[Scheduler] Error:", error);
+  if (postsToPublish.length === 0) {
+    return [];
   }
-}
 
-export function startScheduler() {
-  if (isRunning || typeof window !== "undefined") return;
-  
-  isRunning = true;
-  console.log("[Scheduler] Started - checking every minute");
-  
-  // 立即检查一次
-  checkScheduledPosts();
-  
-  // 每分钟检查一次
-  intervalId = setInterval(checkScheduledPosts, 60 * 1000);
-}
+  const results = await prisma.$transaction(
+    postsToPublish.map((post) =>
+      prisma.post.update({
+        where: { id: post.id },
+        data: {
+          published: true,
+          publishedAt: post.scheduledAt ?? now,
+          scheduledAt: null,
+        },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+        },
+      }),
+    ),
+  );
 
-export function stopScheduler() {
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
-  }
-  isRunning = false;
-  console.log("[Scheduler] Stopped");
+  invalidatePostCaches(results.map((post) => post.slug));
+  return results;
 }

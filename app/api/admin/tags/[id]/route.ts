@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateSlug } from "@/lib/utils";
+import { invalidateTaxonomyCaches } from "@/lib/cache";
+import { requireAdmin } from "@/lib/admin";
 
-// PUT - 更新标签
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: "未授权" },
-        { status: 401 },
-      );
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
     }
 
     const { id } = await params;
@@ -24,22 +20,22 @@ export async function PUT(
 
     if (!name || !slug) {
       return NextResponse.json(
-        { success: false, error: "名称和 slug 不能为空" },
+        { success: false, error: "Name and slug are required" },
         { status: 400 },
       );
     }
 
-    // 检查 slug 是否被其他标签使用
+    const finalSlug = generateSlug(slug);
     const existing = await prisma.tag.findFirst({
       where: {
-        slug,
+        slug: finalSlug,
         NOT: { id },
       },
     });
 
     if (existing) {
       return NextResponse.json(
-        { success: false, error: "URL 别名已被使用" },
+        { success: false, error: "Slug already exists" },
         { status: 400 },
       );
     }
@@ -48,43 +44,39 @@ export async function PUT(
       where: { id },
       data: {
         name,
-        slug: generateSlug(slug),
+        slug: finalSlug,
       },
     });
+
+    invalidateTaxonomyCaches();
 
     return NextResponse.json({
       success: true,
       data: tag,
-      message: "标签更新成功",
+      message: "Tag updated",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "更新标签失败",
+        error: error instanceof Error ? error.message : "Failed to update tag",
       },
       { status: 500 },
     );
   }
 }
 
-// DELETE - 删除标签
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: "未授权" },
-        { status: 401 },
-      );
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
     }
 
     const { id } = await params;
-
-    // 检查是否有文章使用此标签
     const postsCount = await prisma.postTag.count({
       where: { tagId: id },
     });
@@ -93,7 +85,7 @@ export async function DELETE(
       return NextResponse.json(
         {
           success: false,
-          error: `无法删除，还有 ${postsCount} 篇文章使用此标签`,
+          error: `Tag is still used by ${postsCount} posts`,
         },
         { status: 400 },
       );
@@ -103,15 +95,17 @@ export async function DELETE(
       where: { id },
     });
 
+    invalidateTaxonomyCaches();
+
     return NextResponse.json({
       success: true,
-      message: "标签删除成功",
+      message: "Tag deleted",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "删除标签失败",
+        error: error instanceof Error ? error.message : "Failed to delete tag",
       },
       { status: 500 },
     );

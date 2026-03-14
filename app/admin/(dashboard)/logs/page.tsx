@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Tabs, Table, Tag, Spin } from "antd";
+import { Tabs, Table, Tag, Spin, theme } from "antd";
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -34,6 +34,7 @@ interface LoginLog {
 }
 
 export default function LogsPage() {
+  const { token } = theme.useToken();
   const [operationLogs, setOperationLogs] = useState<OperationLog[]>([]);
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -244,15 +245,40 @@ export default function LogsPage() {
 
   if (loading && operationLogs.length === 0) {
     return (
-      <div style={{ textAlign: "center", padding: 100 }}>
+      <div
+        style={{
+          textAlign: "center",
+          padding: 100,
+          background: token.colorBgContainer,
+          borderRadius: 12,
+          border: `1px solid ${token.colorBorderSecondary}`,
+        }}
+      >
         <Spin size="large" />
       </div>
     );
   }
 
   return (
-    <div style={{ background: "#fff", borderRadius: 8, padding: 16 }}>
-      <Tabs items={items} />
+    <div
+      style={{
+        background: token.colorBgContainer,
+        borderRadius: 12,
+        border: `1px solid ${token.colorBorderSecondary}`,
+        boxShadow:
+          token.colorBgContainer === "#1e2128"
+            ? "0 8px 24px rgba(0, 0, 0, 0.24)"
+            : "0 8px 24px rgba(15, 23, 42, 0.06)",
+        padding: 16,
+      }}
+    >
+      <Tabs
+        items={items}
+        tabBarStyle={{
+          marginBottom: 16,
+          borderBottom: `1px solid ${token.colorBorderSecondary}`,
+        }}
+      />
     </div>
   );
 }

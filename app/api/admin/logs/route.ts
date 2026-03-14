@@ -1,22 +1,18 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/admin";
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: "未授权" },
-        { status: 401 },
-      );
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
     }
 
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get("type") || "operation"; // operation | login
-    const page = parseInt(searchParams.get("page") || "1");
-    const pageSize = parseInt(searchParams.get("pageSize") || "20");
+    const type = searchParams.get("type") || "operation";
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || "20", 10);
 
     if (type === "login") {
       const [logs, total] = await Promise.all([
@@ -27,22 +23,7 @@ export async function GET(request: Request) {
         }),
         prisma.loginLog.count(),
       ]);
-      return NextResponse.json({
-        success: true,
-        data: logs,
-        total,
-        page,
-        pageSize,
-      });
-    } else {
-      const [logs, total] = await Promise.all([
-        prisma.operationLog.findMany({
-          orderBy: { createdAt: "desc" },
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-        }),
-        prisma.operationLog.count(),
-      ]);
+
       return NextResponse.json({
         success: true,
         data: logs,
@@ -51,10 +32,27 @@ export async function GET(request: Request) {
         pageSize,
       });
     }
+
+    const [logs, total] = await Promise.all([
+      prisma.operationLog.findMany({
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.operationLog.count(),
+    ]);
+
+    return NextResponse.json({
+      success: true,
+      data: logs,
+      total,
+      page,
+      pageSize,
+    });
   } catch (error) {
     console.error("Failed to fetch logs:", error);
     return NextResponse.json(
-      { success: false, error: "获取日志失败" },
+      { success: false, error: "Failed to fetch logs" },
       { status: 500 },
     );
   }

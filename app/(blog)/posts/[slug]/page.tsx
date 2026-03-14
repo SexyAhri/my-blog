@@ -1,50 +1,44 @@
 import { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import PostContent from "./PostContent";
+import { calculateReadingTime, renderRichContent } from "@/lib/content";
+import { getPublishedPostDetail, type PostDetailData } from "@/lib/posts";
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
 const SITE_URL = "https://blog.vixenahri.cn";
+const getPost = cache(getPublishedPostDetail);
 
-// React cache 去重：generateMetadata 和 PostPage 共享同一次查询
-const getPost = cache(async (slug: string) => {
-  return prisma.post.findUnique({
-    where: { slug, published: true },
-    include: {
-      author: { select: { name: true, image: true } },
-      category: { select: { name: true, slug: true } },
-      tags: { include: { tag: true } },
-    },
-  });
-});
+function toClientPost(post: PostDetailData) {
+  const { content, ...rest } = post;
+  void content;
+  return rest;
+}
 
-// 生成动态 SEO 元数据
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPost(slug);
 
   if (!post) {
-    return { title: "文章不存在" };
+    return { title: "Article not found" };
   }
 
-  const keywords = post.tags?.map((t) => t.tag.name).join(", ") || "";
-  const canonicalUrl = `${SITE_URL}/posts/${slug}`;
-  const cover: string | null = post.coverImage ?? null;
-  const coverImageUrl = cover
-    ? cover.startsWith("http")
-      ? cover
-      : `${SITE_URL}${cover}`
+  const keywords = post.tags.map((tag) => tag.tag.name).join(", ");
+  const canonicalUrl = `${SITE_URL}/posts/${post.slug}`;
+  const coverImageUrl = post.coverImage
+    ? post.coverImage.startsWith("http")
+      ? post.coverImage
+      : `${SITE_URL}${post.coverImage}`
     : `${SITE_URL}/og-default.png`;
 
   return {
     title: post.title,
     description: post.excerpt || `${post.title} - VixenAhri Blog`,
-    keywords: keywords,
-    authors: [{ name: post.author?.name || "VixenAhri" }],
+    keywords,
+    authors: [{ name: post.author.name || "VixenAhri" }],
     alternates: {
       canonical: canonicalUrl,
     },
@@ -55,11 +49,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: canonicalUrl,
       siteName: "VixenAhri Blog",
       locale: "zh_CN",
-      publishedTime: post.publishedAt?.toISOString(),
-      modifiedTime: post.updatedAt?.toISOString(),
-      authors: [post.author?.name || "VixenAhri"],
+      publishedTime: post.publishedAt,
+      modifiedTime: post.updatedAt,
+      authors: [post.author.name || "VixenAhri"],
       section: post.category?.name,
-      tags: post.tags?.map((t) => t.tag.name),
+      tags: post.tags.map((tag) => tag.tag.name),
       images: [
         {
           url: coverImageUrl,
@@ -87,20 +81,13 @@ export default async function PostPage({ params }: Props) {
     notFound();
   }
 
-  // 增加浏览量（不阻塞渲染）
-  prisma.post
-    .update({
-      where: { id: post.id },
-      data: { viewCount: { increment: 1 } },
-    })
-    .catch(() => {});
-
-  // JSON-LD 结构化数据
-  const cover: string | null = post.coverImage ?? null;
-  const coverImageUrl = cover
-    ? cover.startsWith("http")
-      ? cover
-      : `${SITE_URL}${cover}`
+  const rendered = renderRichContent(post.content);
+  const readingTime = calculateReadingTime(post.content);
+  const postForClient = toClientPost(post);
+  const coverImageUrl = post.coverImage
+    ? post.coverImage.startsWith("http")
+      ? post.coverImage
+      : `${SITE_URL}${post.coverImage}`
     : `${SITE_URL}/og-default.png`;
 
   const jsonLd = {
@@ -109,11 +96,11 @@ export default async function PostPage({ params }: Props) {
     headline: post.title,
     description: post.excerpt || "",
     image: coverImageUrl,
-    datePublished: post.publishedAt?.toISOString(),
-    dateModified: post.updatedAt?.toISOString(),
+    datePublished: post.publishedAt,
+    dateModified: post.updatedAt,
     author: {
       "@type": "Person",
-      name: post.author?.name || "VixenAhri",
+      name: post.author.name || "VixenAhri",
       url: SITE_URL,
     },
     publisher: {
@@ -127,12 +114,12 @@ export default async function PostPage({ params }: Props) {
     },
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": `${SITE_URL}/posts/${slug}`,
+      "@id": `${SITE_URL}/posts/${post.slug}`,
     },
-    keywords: post.tags?.map((t) => t.tag.name).join(", "),
+    keywords: post.tags.map((tag) => tag.tag.name).join(", "),
     articleSection: post.category?.name,
-    wordCount: post.content?.length || 0,
-    url: `${SITE_URL}/posts/${slug}`,
+    wordCount: post.content.length,
+    url: `${SITE_URL}/posts/${post.slug}`,
   };
 
   return (
@@ -141,7 +128,13 @@ export default async function PostPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <PostContent slug={slug} />
+      <PostContent
+        key={post.id}
+        post={postForClient}
+        renderedContent={rendered.html}
+        toc={rendered.toc}
+        readingTime={readingTime}
+      />
     </>
   );
 }

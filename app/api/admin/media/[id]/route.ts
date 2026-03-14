@@ -1,43 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { existsSync } from "fs";
 import { unlink } from "fs/promises";
 import { join } from "path";
-import { existsSync } from "fs";
+import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/admin";
 
-// DELETE - 删除媒体文件
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "未授权" }, { status: 401 });
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
     }
 
     const { id } = await params;
-
-    // 查找媒体文件
     const media = await prisma.media.findUnique({
       where: { id },
     });
 
     if (!media) {
       return NextResponse.json(
-        { success: false, error: "媒体文件不存在" },
+        { success: false, error: "Media not found" },
         { status: 404 },
       );
     }
 
-    // 删除物理文件
     const filepath = join(process.cwd(), "public", media.filepath);
     if (existsSync(filepath)) {
       await unlink(filepath);
     }
 
-    // 删除数据库记录
     await prisma.media.delete({
       where: { id },
     });
@@ -46,21 +40,20 @@ export async function DELETE(
   } catch (error) {
     console.error("Failed to delete media:", error);
     return NextResponse.json(
-      { success: false, error: "删除失败" },
+      { success: false, error: "Delete failed" },
       { status: 500 },
     );
   }
 }
 
-// PUT - 更新媒体文件信息
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "未授权" }, { status: 401 });
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
     }
 
     const { id } = await params;
@@ -87,7 +80,7 @@ export async function PUT(
   } catch (error) {
     console.error("Failed to update media:", error);
     return NextResponse.json(
-      { success: false, error: "更新失败" },
+      { success: false, error: "Update failed" },
       { status: 500 },
     );
   }

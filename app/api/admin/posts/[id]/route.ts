@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateSlug } from "@/lib/utils";
-import { logOperation, getClientInfo } from "@/lib/logger";
-import { cache } from "@/lib/cache";
+import { getClientInfo, logOperation } from "@/lib/logger";
+import { invalidatePostCaches, invalidateTaxonomyCaches } from "@/lib/cache";
+import { requireAdmin } from "@/lib/admin";
+import { sanitizeRichContent } from "@/lib/content";
 
-// GET - 获取单篇文章
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
+    }
+
     const { id } = await params;
     const post = await prisma.post.findUnique({
       where: { id },
@@ -34,7 +38,7 @@ export async function GET(
 
     if (!post) {
       return NextResponse.json(
-        { success: false, error: "文章不存在" },
+        { success: false, error: "Post not found" },
         { status: 404 },
       );
     }
@@ -47,27 +51,24 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "获取文章失败",
+        error: error instanceof Error ? error.message : "Failed to fetch post",
       },
       { status: 500 },
     );
   }
 }
 
-// PUT - 更新文章
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: "未授权" },
-        { status: 401 },
-      );
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
     }
 
+    const session = admin.session!;
     const { id } = await params;
     const body = await request.json();
     const {
@@ -87,15 +88,12 @@ export async function PUT(
 
     if (!title || !content) {
       return NextResponse.json(
-        { success: false, error: "标题和内容不能为空" },
+        { success: false, error: "Title and content are required" },
         { status: 400 },
       );
     }
 
-    // 生成或验证 slug
-    const finalSlug = slug ? generateSlug(slug) : generateSlug(title);
-
-    // 检查 slug 是否被其他文章使用
+    const finalSlug = generateSlug(slug || title);
     const existing = await prisma.post.findFirst({
       where: {
         slug: finalSlug,
@@ -105,66 +103,74 @@ export async function PUT(
 
     if (existing) {
       return NextResponse.json(
-        { success: false, error: "URL 别名已被使用" },
+        { success: false, error: "Slug already exists" },
         { status: 400 },
       );
     }
 
-    // 获取当前文章状态
     const currentPost = await prisma.post.findUnique({
       where: { id },
+      select: {
+        published: true,
+        publishedAt: true,
+        slug: true,
+      },
     });
 
-    // 支持 tags 或 tagIds 参数
+    if (!currentPost) {
+      return NextResponse.json(
+        { success: false, error: "Post not found" },
+        { status: 404 },
+      );
+    }
+
     const finalTagIds = tagIds || tags || [];
-
-    // 删除现有的标签关联
-    await prisma.postTag.deleteMany({
-      where: { postId: id },
-    });
-
-    // 处理定时发布
     const isScheduled = scheduledAt && new Date(scheduledAt) > new Date();
     const shouldPublish = published && !isScheduled;
+    const safeContent = sanitizeRichContent(content);
 
-    // 更新文章
-    const post = await prisma.post.update({
-      where: { id },
-      data: {
-        title,
-        slug: finalSlug,
-        content,
-        excerpt,
-        coverImage,
-        published: shouldPublish,
-        publishedAt:
-          shouldPublish && !currentPost?.published
-            ? new Date()
-            : currentPost?.publishedAt,
-        scheduledAt: isScheduled ? new Date(scheduledAt) : null,
-        categoryId: categoryId || null,
-        seriesId: seriesId || null,
-        seriesOrder: seriesOrder || null,
-        tags: finalTagIds.length
-          ? {
-              create: finalTagIds.map((tagId: string) => ({
-                tagId,
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        category: true,
-        series: true,
-        tags: {
-          include: {
-            tag: true,
+    const post = await prisma.$transaction(async (tx) => {
+      await tx.postTag.deleteMany({
+        where: { postId: id },
+      });
+
+      return tx.post.update({
+        where: { id },
+        data: {
+          title,
+          slug: finalSlug,
+          content: safeContent,
+          excerpt,
+          coverImage,
+          published: shouldPublish,
+          publishedAt:
+            shouldPublish && !currentPost.published
+              ? new Date()
+              : currentPost.publishedAt,
+          scheduledAt: isScheduled ? new Date(scheduledAt) : null,
+          categoryId: categoryId || null,
+          seriesId: seriesId || null,
+          seriesOrder: seriesOrder || null,
+          tags: finalTagIds.length
+            ? {
+                create: finalTagIds.map((tagId: string) => ({
+                  tagId,
+                })),
+              }
+            : undefined,
+        },
+        include: {
+          category: true,
+          series: true,
+          tags: {
+            include: {
+              tag: true,
+            },
           },
         },
-      },
+      });
     });
 
-    // 记录操作日志
     const { ip, userAgent } = getClientInfo(request);
     await logOperation({
       userId: session.user.id,
@@ -177,44 +183,38 @@ export async function PUT(
       userAgent,
     });
 
-    // 清除缓存
-    cache.deletePattern("^posts:");
-    cache.delete(`post:${post.slug}`);
+    invalidatePostCaches([currentPost.slug, post.slug]);
+    invalidateTaxonomyCaches();
 
     return NextResponse.json({
       success: true,
       data: post,
-      message: isScheduled ? "文章已设置定时发布" : "文章更新成功",
+      message: isScheduled ? "Post scheduled" : "Post updated",
     });
   } catch (error) {
     console.error("Update post error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "更新文章失败",
+        error: error instanceof Error ? error.message : "Failed to update post",
       },
       { status: 500 },
     );
   }
 }
 
-// DELETE - 删除文章
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: "未授权" },
-        { status: 401 },
-      );
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
     }
 
+    const session = admin.session!;
     const { id } = await params;
-
-    // 获取文章信息用于日志和缓存清除
     const post = await prisma.post.findUnique({
       where: { id },
       select: { title: true, slug: true },
@@ -224,7 +224,6 @@ export async function DELETE(
       where: { id },
     });
 
-    // 记录操作日志
     const { ip, userAgent } = getClientInfo(request);
     await logOperation({
       userId: session.user.id,
@@ -237,21 +236,18 @@ export async function DELETE(
       userAgent,
     });
 
-    // 清除缓存
-    cache.deletePattern("^posts:");
-    if (post?.slug) {
-      cache.delete(`post:${post.slug}`);
-    }
+    invalidatePostCaches([post?.slug]);
+    invalidateTaxonomyCaches();
 
     return NextResponse.json({
       success: true,
-      message: "文章删除成功",
+      message: "Post deleted",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "删除文章失败",
+        error: error instanceof Error ? error.message : "Failed to delete post",
       },
       { status: 500 },
     );
