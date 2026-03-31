@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateSlug } from "@/lib/utils";
 import { getClientInfo, logOperation } from "@/lib/logger";
 import { invalidatePostCaches, invalidateTaxonomyCaches } from "@/lib/cache";
 import { requireAdmin } from "@/lib/admin";
 import { sanitizeRichContent } from "@/lib/content";
+import { parsePostMutationInput } from "@/lib/post-payload";
 
 export async function GET(
   request: NextRequest,
@@ -70,33 +70,19 @@ export async function PUT(
 
     const session = admin.session!;
     const { id } = await params;
-    const body = await request.json();
-    const {
-      title,
-      slug,
-      content,
-      excerpt,
-      coverImage,
-      published,
-      categoryId,
-      tags,
-      tagIds,
-      seriesId,
-      seriesOrder,
-      scheduledAt,
-    } = body;
+    const parsedInput = parsePostMutationInput(await request.json());
 
-    if (!title || !content) {
+    if (!parsedInput.success) {
       return NextResponse.json(
-        { success: false, error: "Title and content are required" },
-        { status: 400 },
+        { success: false, error: parsedInput.error },
+        { status: parsedInput.status },
       );
     }
 
-    const finalSlug = generateSlug(slug || title);
+    const input = parsedInput.data;
     const existing = await prisma.post.findFirst({
       where: {
-        slug: finalSlug,
+        slug: input.slug,
         NOT: { id },
       },
     });
@@ -124,10 +110,7 @@ export async function PUT(
       );
     }
 
-    const finalTagIds = tagIds || tags || [];
-    const isScheduled = scheduledAt && new Date(scheduledAt) > new Date();
-    const shouldPublish = published && !isScheduled;
-    const safeContent = sanitizeRichContent(content);
+    const safeContent = sanitizeRichContent(input.content);
 
     const post = await prisma.$transaction(async (tx) => {
       await tx.postTag.deleteMany({
@@ -137,23 +120,23 @@ export async function PUT(
       return tx.post.update({
         where: { id },
         data: {
-          title,
-          slug: finalSlug,
+          title: input.title,
+          slug: input.slug,
           content: safeContent,
-          excerpt,
-          coverImage,
-          published: shouldPublish,
+          excerpt: input.excerpt,
+          coverImage: input.coverImage,
+          published: input.shouldPublish,
           publishedAt:
-            shouldPublish && !currentPost.published
+            input.shouldPublish && !currentPost.published
               ? new Date()
               : currentPost.publishedAt,
-          scheduledAt: isScheduled ? new Date(scheduledAt) : null,
-          categoryId: categoryId || null,
-          seriesId: seriesId || null,
-          seriesOrder: seriesOrder || null,
-          tags: finalTagIds.length
+          scheduledAt: input.scheduledAt,
+          categoryId: input.categoryId,
+          seriesId: input.seriesId,
+          seriesOrder: input.seriesOrder,
+          tags: input.tagIds.length
             ? {
-                create: finalTagIds.map((tagId: string) => ({
+                create: input.tagIds.map((tagId) => ({
                   tagId,
                 })),
               }
@@ -177,7 +160,7 @@ export async function PUT(
       userName: session.user.name || undefined,
       action: "update",
       module: "post",
-      target: title,
+      target: input.title,
       targetId: id,
       ip,
       userAgent,
@@ -189,7 +172,7 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       data: post,
-      message: isScheduled ? "Post scheduled" : "Post updated",
+      message: input.isScheduled ? "Post scheduled" : "Post updated",
     });
   } catch (error) {
     console.error("Update post error:", error);

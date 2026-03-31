@@ -1,222 +1,179 @@
 # VixenAhri Blog
 
-一个基于 Next.js 16 的现代化个人博客系统。
+A personal blog and admin workspace built with Next.js 16, Prisma, PostgreSQL, and Ant Design.
 
-**在线预览**: [blog.vixenahri.cn](https://blog.vixenahri.cn)
+Live site: [https://blog.vixenahri.cn](https://blog.vixenahri.cn)
 
-## 技术栈
+## Overview
 
-- **框架**: Next.js 16 (App Router)
-- **语言**: TypeScript
-- **UI**: Ant Design 5
-- **数据库**: PostgreSQL + Prisma
-- **认证**: NextAuth.js
-- **编辑器**: TipTap
-- **代码高亮**: Prism.js
-- **邮件**: Resend
-- **部署**: Docker + Watchtower
+This project ships with:
 
-## 功能特性
+- A public blog with posts, categories, tags, series pages, search, RSS, sitemap, comments, and SEO metadata
+- An admin dashboard for writing posts, managing media, moderating comments, and updating site settings
+- A server-side admin access gate that can require a secret entry URL before the normal admin login page
+- Scheduled publishing support protected by a bearer token
+- Media usage auditing to detect missing files, orphaned uploads, and broken references
 
-### 博客前台
+## Stack
 
-- 文章列表、详情、目录导航
-- 阅读时间估算
-- 代码语法高亮
-- 图片懒加载 + 点击放大
-- 文章点赞
-- 文章分享（Twitter、微博、微信、复制链接）
-- 返回顶部按钮
-- 分类、标签、归档
-- 文章系列/专栏
-- 全文搜索
-- 评论系统（支持审核、回复通知）
-- RSS 订阅 & Sitemap
-- Google Analytics 统计
-- SEO 优化（JSON-LD 结构化数据、Open Graph、Twitter Cards）
-- 隐私政策页面
-- 响应式设计
+- Next.js 16 with the App Router
+- React 19
+- TypeScript
+- Ant Design 6
+- PostgreSQL
+- Prisma
+- NextAuth credentials authentication
+- TipTap editor
+- Resend for comment notification emails
+- Docker Compose for deployment
 
-### 后台管理
+## Key Features
 
-- 仪表盘数据统计
-- 文章管理（富文本编辑器、Markdown 快捷键）
-- 定时发布
-- 草稿预览
-- 批量操作（发布、删除）
-- 分类 / 标签 / 系列管理
-- 媒体库（图片上传）
-- 评论管理
-- 访问统计
-- 网站设置（SEO、社交媒体、显示选项）
-- 个人信息（头像、密码修改）
-- 系统日志
-- 深色 / 浅色主题
+### Public blog
 
-## 快速开始
+- Post listing, post detail, categories, tags, archives, and series pages
+- Search endpoint and dedicated search page
+- Rich post content rendering with table of contents and reading time
+- Comments with moderation and reply notification support
+- RSS feed and sitemap generation
+- Open Graph, Twitter card, and structured metadata support
+- Profile card settings, social links, privacy page, and footer settings
 
-### 环境要求
+### Admin dashboard
+
+- Post editor with draft, publish, schedule, taxonomy, and cover image support
+- Category, tag, and series management
+- Series cover image support in both admin and public views
+- Media library with upload, usage analysis, orphan detection, and safe delete rules
+- Settings, profile, password change, and analytics configuration
+- Stats and log views
+
+### Security and validation
+
+- Admin middleware gate using `ADMIN_ACCESS_KEY`
+- Server-side validation for post, settings, profile, series, and media mutations
+- Matching client-side form validation for the main admin forms
+- Protected cron endpoint using `Authorization: Bearer <CRON_SECRET>`
+
+## Getting Started
+
+### Requirements
 
 - Node.js 20+
 - PostgreSQL 14+
 
-### 本地开发
+### Local development
 
 ```bash
-# 克隆项目
 git clone https://github.com/SexyAhri/my-blog.git
 cd my-blog
-
-# 安装依赖
 npm install
+Copy-Item .env.example .env
+```
 
-# 配置环境变量
-cp .env.example .env
-# 编辑 .env 填写数据库连接等配置
+Update `.env`, then run:
 
-# 初始化数据库
-npx prisma db push
-npx prisma db seed
-
-# 启动开发服务器
+```bash
+npm run db:push
+npm run db:seed
 npm run dev
 ```
 
-访问 http://localhost:5177
+The app runs on `http://localhost:5177`.
 
-### 环境变量
+## Environment Variables
 
-```env
-DATABASE_URL="postgresql://user:password@host:5432/myblog"
-NEXTAUTH_SECRET="your-secret-key"
-NEXTAUTH_URL="http://localhost:5177"
+### Required for local development
 
-# 管理员账号（Seed 脚本使用）
-ADMIN_EMAIL="admin@example.com"
-ADMIN_NAME="Admin"
-ADMIN_PASSWORD="your-password"
+| Variable | Description |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `NEXTAUTH_URL` | Base URL for auth callbacks, usually `http://localhost:5177` locally |
+| `NEXTAUTH_SECRET` | Random secret for NextAuth |
+| `ADMIN_EMAIL` | Seed admin email |
+| `ADMIN_NAME` | Seed admin display name |
+| `ADMIN_PASSWORD` | Seed admin password |
 
-# 邮件通知（可选）
-RESEND_API_KEY="re_xxxxxxxxxxxx"
-NEXT_PUBLIC_SITE_URL="https://your-domain.com"
+### Optional but recommended
 
-# 定时发布（可选）
-CRON_SECRET="your-cron-secret"
+| Variable | Description |
+| --- | --- |
+| `ADMIN_ACCESS_KEY` | Extra server-only gate for `/admin`; visit `/admin/login/<key>` once to set the cookie |
+| `RESEND_API_KEY` | Enables comment notification emails |
+| `NEXT_PUBLIC_SITE_URL` | Public site URL used in emails and absolute links |
+| `CRON_SECRET` | Secures `/api/cron/publish` |
+
+## Admin Access Flow
+
+If `ADMIN_ACCESS_KEY` is set:
+
+1. Visit `/admin/login/<your-key>`
+2. Middleware stores a secure admin gate cookie
+3. You are redirected to `/admin/login`
+4. Sign in with the seeded or existing admin account
+
+If `ADMIN_ACCESS_KEY` is empty, the extra gate is disabled and `/admin/login` stays directly accessible.
+
+## Media Library Audit
+
+The admin media page now includes storage and usage auditing:
+
+- Detects where each upload is used
+- Flags tracked media that are missing from storage
+- Finds orphaned files that exist on disk but are not tracked
+- Finds broken references that point to uploads that no longer exist
+- Prevents deletion of files that are still referenced
+
+## Scheduler
+
+Scheduled posts are published through:
+
+```text
+GET /api/cron/publish
+Authorization: Bearer <CRON_SECRET>
 ```
 
-### 图片优化
+If `CRON_SECRET` is not configured, the endpoint returns `503`.
 
-使用 Next.js `Image` 组件自动优化：
-- 文章封面、相关文章、侧边栏头像
-- 图片懒加载、响应式 `sizes`
-- 点击放大模态框
+## Useful Scripts
 
-### API 限流
-
-- **评论提交**：每 IP 每分钟最多 5 次
-- **搜索**：每 IP 每分钟最多 30 次
-
-超限返回 429，提示「操作过于频繁，请稍后再试」。
-
-## Docker 部署
-
-### 使用 Docker Compose
-
-```yaml
-version: "3.8"
-services:
-  blog:
-    image: ahridocker/my-blog:latest
-    container_name: vixenahri-blog
-    restart: unless-stopped
-    ports:
-      - "5177:5177"
-    environment:
-      - DATABASE_URL=postgresql://user:pass@host:5432/myblog
-      - NEXTAUTH_SECRET=your-secret
-      - NEXTAUTH_URL=https://your-domain.com
-      - RESEND_API_KEY=re_xxxxxxxxxxxx
-      - NEXT_PUBLIC_SITE_URL=https://your-domain.com
-    volumes:
-      - ./uploads:/app/public/uploads
-
-  watchtower:
-    image: containrrr/watchtower:latest
-    container_name: watchtower
-    restart: unless-stopped
-    environment:
-      - DOCKER_API_VERSION=1.44
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 300 --cleanup vixenahri-blog
+```bash
+npm run dev
+npm run build
+npm start
+npm run lint
+npm run prisma:generate
+npm run prisma:migrate
+npm run prisma:studio
+npm run db:push
+npm run db:seed
 ```
+
+## Docker Deployment
+
+Use `.env.local.example` as a deployment template, then start the stack with:
 
 ```bash
 docker compose up -d
 ```
 
-### 初始化数据库
+Optional Cloudflare tunnel:
 
 ```bash
-docker exec -it vixenahri-blog npx prisma db push
-docker exec -it vixenahri-blog npx prisma db seed
+docker compose --profile cloudflare up -d
 ```
 
-## 数据库表说明
-
-### Setting 表（键值对配置）
-
-| key | 说明 | 示例 |
-|-----|------|------|
-| siteName | 网站名称 | 我的博客 |
-| siteDescription | 网站描述 | 一个基于 Next.js 的个人博客 |
-| siteKeywords | 网站关键词 | 博客,技术,分享 |
-| siteUrl | 网站地址 | https://example.com |
-| siteAuthor | 网站作者 | VixenAhri |
-| siteEmail | 联系邮箱 | admin@example.com |
-| siteIcp | ICP 备案号 | 京ICP备xxx号 |
-| siteMotto | 个人格言（侧边栏简介卡片） | 记录与分享，让技术更有温度 |
-| siteAvatar | 头像 URL（侧边栏简介卡片） | /uploads/avatar.jpg |
-| siteProfileBanner | 个人简介背景图（侧边栏卡片顶部） | /uploads/banner.jpg |
-| siteAnalytics | 统计代码 | Google Analytics 脚本 |
-| postsPerPage | 每页文章数 | 10 |
-| enableComments | 启用评论 | true / false |
-| enableRss | 启用 RSS | true / false |
-| enableSitemap | 启用 Sitemap | true / false |
-| socialGithub | GitHub 链接 | https://github.com/xxx |
-| socialTwitter | Twitter 链接 | |
-| socialWeibo | 微博链接 | |
-| socialEmail | 社交邮箱 | |
-
-**个人简介卡片**（`/api/settings/profile`）使用：`siteUrl`、`siteMotto`、`siteAvatar`。`postCount`、`commentCount` 由 Post、Comment 表统计。
-
-## 项目结构
-
-```
-my-blog/
-├── app/
-│   ├── (blog)/          # 前台页面
-│   ├── admin/           # 后台管理
-│   ├── api/             # API 路由
-│   ├── feed.xml/        # RSS
-│   └── sitemap.ts       # Sitemap
-├── components/
-│   ├── admin/           # 后台组件
-│   ├── blog/            # 前台组件
-│   └── common/          # 通用组件
-├── lib/                 # 工具库
-├── prisma/              # 数据库
-└── public/uploads/      # 上传文件
-```
-
-## 开发命令
+After the container is running, initialize the database if needed:
 
 ```bash
-npm run dev       # 开发模式
-npm run build     # 构建
-npm start         # 生产模式
-npm run lint      # 代码检查
+docker exec -it vixenahri-blog npm run db:push
+docker exec -it vixenahri-blog npm run db:seed
 ```
+
+## Notes
+
+- `npm run lint` and `npm run build` currently pass.
+- The build may still show `baseline-browser-mapping` age warnings even with the latest published package. That warning is upstream data freshness, not a local pin mismatch.
 
 ## License
 

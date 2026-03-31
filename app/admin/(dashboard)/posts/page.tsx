@@ -1,19 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Row, Col, Tag, Button, Space, App } from "antd";
+import { App, Button, Col, Row, Space, Tag } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
-  FileTextOutlined,
   CheckCircleOutlined,
-  EditOutlined,
-  PlusOutlined,
-  EyeOutlined,
   DeleteOutlined,
+  EditOutlined,
+  FileTextOutlined,
+  PlusOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
-import { MetricCard, DataTable, ActionButtons } from "@/components/common";
-import Link from "next/link";
+import { DataTable, MetricCard } from "@/components/common";
 
 interface Post {
   id: string;
@@ -24,12 +23,34 @@ interface Post {
   published: boolean;
   featured: boolean;
   categoryId?: string;
-  category?: { id: string; name: string };
-  tags?: Array<{ tag: { id: string; name: string } }>;
-  author: { name: string; email: string };
+  category?: {
+    id: string;
+    name: string;
+  } | null;
+  tags?: Array<{
+    tag: {
+      id: string;
+      name: string;
+    };
+  }>;
+  author: {
+    name: string;
+    email: string;
+  };
   viewCount: number;
   createdAt: string;
   updatedAt: string;
+}
+
+interface PostsResponse {
+  success: boolean;
+  data: Post[];
+  error?: string;
+}
+
+interface MutationResponse {
+  success: boolean;
+  error?: string;
 }
 
 export default function PostsPage() {
@@ -39,46 +60,53 @@ export default function PostsPage() {
   const router = useRouter();
   const { message, modal } = App.useApp();
 
-  useEffect(() => {
-    loadPosts();
-  }, []);
-
-  const loadPosts = async () => {
+  const loadPosts = useCallback(async () => {
     setLoading(true);
+
     try {
       const res = await fetch("/api/admin/posts");
-      const data = await res.json();
+      const data = (await res.json()) as PostsResponse;
+
       if (data.success) {
         setPosts(data.data);
+      } else {
+        setPosts([]);
+        message.error(data.error || "Failed to load posts");
       }
-    } catch (error) {
-      message.error("加载失败");
+    } catch {
+      setPosts([]);
+      message.error("Failed to load posts");
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
+
+  useEffect(() => {
+    void loadPosts();
+  }, [loadPosts]);
 
   const handleDelete = (id: string) => {
     modal.confirm({
-      title: "确认删除",
-      content: "确定要删除这篇文章吗？",
-      okText: "确定",
-      cancelText: "取消",
+      title: "Delete post",
+      content: "This action cannot be undone. Continue?",
+      okText: "Delete",
+      cancelText: "Cancel",
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           const res = await fetch(`/api/admin/posts/${id}`, {
             method: "DELETE",
           });
-          const data = await res.json();
+          const data = (await res.json()) as MutationResponse;
+
           if (data.success) {
-            message.success("删除成功");
-            loadPosts();
+            message.success("Post deleted");
+            await loadPosts();
           } else {
-            message.error(data.error || "删除失败");
+            message.error(data.error || "Failed to delete post");
           }
-        } catch (error) {
-          message.error("删除失败");
+        } catch {
+          message.error("Failed to delete post");
         }
       },
     });
@@ -86,15 +114,10 @@ export default function PostsPage() {
 
   const handleBatchDelete = () => {
     modal.confirm({
-      title: "批量删除",
-      content: (
-        <div>
-          <p>确定要删除选中的 {selectedRowKeys.length} 篇文章吗？</p>
-          <p style={{ color: "#ff4d4f", fontSize: 12 }}>⚠️ 此操作不可恢复</p>
-        </div>
-      ),
-      okText: "确定删除",
-      cancelText: "取消",
+      title: "Delete selected posts",
+      content: `Delete ${selectedRowKeys.length} selected posts? This cannot be undone.`,
+      okText: "Delete",
+      cancelText: "Cancel",
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
@@ -103,126 +126,117 @@ export default function PostsPage() {
               fetch(`/api/admin/posts/${id}`, { method: "DELETE" }),
             ),
           );
-          const successCount = results.filter(
-            (r) => r.ok || r.status === 200,
-          ).length;
-          message.success(`成功删除 ${successCount} 篇文章`);
+          const successCount = results.filter((result) => result.ok).length;
+          message.success(`Deleted ${successCount} posts`);
           setSelectedRowKeys([]);
-          loadPosts();
-        } catch (error) {
-          message.error("批量删除失败");
+          await loadPosts();
+        } catch {
+          message.error("Failed to delete selected posts");
         }
       },
     });
   };
 
-  const handleBatchPublish = async (publish: boolean) => {
+  const handleBatchPublish = async (published: boolean) => {
     try {
       const results = await Promise.all(
         selectedRowKeys.map((id) =>
           fetch(`/api/admin/posts/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ published: publish }),
+            body: JSON.stringify({ published }),
           }),
         ),
       );
-      const successCount = results.filter(
-        (r) => r.ok || r.status === 200,
-      ).length;
+      const successCount = results.filter((result) => result.ok).length;
       message.success(
-        `成功${publish ? "发布" : "取消发布"} ${successCount} 篇文章`,
+        `${published ? "Published" : "Unpublished"} ${successCount} posts`,
       );
       setSelectedRowKeys([]);
-      loadPosts();
-    } catch (error) {
-      message.error("批量操作失败");
+      await loadPosts();
+    } catch {
+      message.error("Batch update failed");
     }
   };
 
-  const publishedCount = posts.filter((p) => p.published).length;
-  const draftCount = posts.filter((p) => !p.published).length;
+  const publishedCount = posts.filter((post) => post.published).length;
+  const draftCount = posts.filter((post) => !post.published).length;
 
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (keys: React.Key[]) => setSelectedRowKeys(keys as string[]),
-  };
-
-  const columns = [
+  const columns: ColumnsType<Post> = [
     {
-      title: "标题",
+      title: "Title",
       dataIndex: "title",
       key: "title",
       width: "30%",
-      render: (text: string, record: Post) => (
+      render: (text, record) => (
         <div>
           <div style={{ fontWeight: 500 }}>{text}</div>
           <div style={{ fontSize: 12, color: "#999", marginTop: 4 }}>
-            作者: {record.author?.name || record.author?.email}
+            Author: {record.author.name || record.author.email}
           </div>
         </div>
       ),
     },
     {
-      title: "分类",
+      title: "Category",
       dataIndex: ["category", "name"],
       key: "category",
-      width: "12%",
-      render: (text: string) =>
-        text || <span style={{ color: "#999" }}>未分类</span>,
+      width: "14%",
+      render: (text?: string) =>
+        text || <span style={{ color: "#999" }}>Uncategorized</span>,
     },
     {
-      title: "状态",
+      title: "Status",
       dataIndex: "published",
       key: "published",
-      width: "10%",
+      width: "12%",
       render: (published: boolean) => (
         <Tag
           icon={published ? <CheckCircleOutlined /> : <EditOutlined />}
           color={published ? "success" : "warning"}
         >
-          {published ? "已发布" : "草稿"}
+          {published ? "Published" : "Draft"}
         </Tag>
       ),
     },
     {
-      title: "浏览",
+      title: "Views",
       dataIndex: "viewCount",
       key: "viewCount",
       width: "10%",
-      render: (count: number) => `${count} 次`,
+      render: (count: number) => `${count}`,
     },
     {
-      title: "创建时间",
+      title: "Created",
       dataIndex: "createdAt",
       key: "createdAt",
-      width: "15%",
+      width: "16%",
       render: (date: string) =>
         new Date(date).toLocaleDateString("zh-CN", {
           year: "numeric",
-          month: "long",
-          day: "numeric",
+          month: "2-digit",
+          day: "2-digit",
         }),
     },
     {
-      title: "操作",
+      title: "Actions",
       key: "action",
-      width: "13%",
-      render: (_: any, record: Post) => (
+      width: "18%",
+      render: (_value, record) => (
         <Space size="small">
           <Button
             type="link"
             size="small"
             onClick={() => router.push(`/admin/posts/${record.id}/edit`)}
           >
-            编辑
+            Edit
           </Button>
           <Button
             type="link"
             size="small"
             onClick={() => window.open(`/posts/${record.slug}`, "_blank")}
           >
-            查看
+            View
           </Button>
           <Button
             type="link"
@@ -230,7 +244,7 @@ export default function PostsPage() {
             danger
             onClick={() => handleDelete(record.id)}
           >
-            删除
+            Delete
           </Button>
         </Space>
       ),
@@ -242,7 +256,7 @@ export default function PostsPage() {
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={8}>
           <MetricCard
-            title="总文章数"
+            title="Total Posts"
             value={posts.length}
             icon={<FileTextOutlined />}
             color="#1890ff"
@@ -250,7 +264,7 @@ export default function PostsPage() {
         </Col>
         <Col xs={24} sm={8}>
           <MetricCard
-            title="已发布"
+            title="Published"
             value={publishedCount}
             icon={<CheckCircleOutlined />}
             color="#52c41a"
@@ -258,7 +272,7 @@ export default function PostsPage() {
         </Col>
         <Col xs={24} sm={8}>
           <MetricCard
-            title="草稿"
+            title="Drafts"
             value={draftCount}
             icon={<EditOutlined />}
             color="#faad14"
@@ -266,74 +280,60 @@ export default function PostsPage() {
         </Col>
       </Row>
 
-      <DataTable
-        cardTitle="文章列表"
+      <DataTable<Post>
+        cardTitle="Posts"
         cardExtra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={loadPosts}>
-              刷新
+            <Button icon={<ReloadOutlined />} onClick={() => void loadPosts()}>
+              Refresh
             </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => router.push("/admin/posts/new")}
             >
-              写新文章
+              New Post
             </Button>
           </Space>
+        }
+        cardChildren={
+          selectedRowKeys.length > 0 ? (
+            <Space style={{ marginBottom: 16 }}>
+              <span>{selectedRowKeys.length} selected</span>
+              <Button
+                size="small"
+                icon={<CheckCircleOutlined />}
+                onClick={() => void handleBatchPublish(true)}
+              >
+                Publish
+              </Button>
+              <Button
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => void handleBatchPublish(false)}
+              >
+                Move to Draft
+              </Button>
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={handleBatchDelete}
+              >
+                Delete Selected
+              </Button>
+            </Space>
+          ) : null
         }
         columns={columns}
         dataSource={posts}
         rowKey="id"
         loading={loading}
-        rowSelection={rowSelection}
         style={{ marginTop: 16 }}
-        cardChildren={
-          selectedRowKeys.length > 0 && (
-            <div
-              style={{
-                marginBottom: 16,
-                padding: 12,
-                background: "#f0f5ff",
-                borderRadius: 8,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span style={{ color: "#1890ff", fontWeight: 500 }}>
-                已选择 {selectedRowKeys.length} 项
-              </span>
-              <Space>
-                <Button
-                  size="small"
-                  icon={<CheckCircleOutlined />}
-                  onClick={() => handleBatchPublish(true)}
-                >
-                  批量发布
-                </Button>
-                <Button
-                  size="small"
-                  icon={<EditOutlined />}
-                  onClick={() => handleBatchPublish(false)}
-                >
-                  取消发布
-                </Button>
-                <Button
-                  size="small"
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={handleBatchDelete}
-                >
-                  批量删除
-                </Button>
-                <Button size="small" onClick={() => setSelectedRowKeys([])}>
-                  取消选择
-                </Button>
-              </Space>
-            </div>
-          )
-        }
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (keys) => setSelectedRowKeys(keys as string[]),
+        }}
       />
     </div>
   );

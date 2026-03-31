@@ -1,29 +1,25 @@
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cache, CACHE_TTL } from "@/lib/cache";
 
-// GET - 获取已发布的文章列表（前台）
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const pageSize = parseInt(searchParams.get("pageSize") || "10");
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
     const categoryId = searchParams.get("categoryId");
     const tagId = searchParams.get("tagId");
     const search = searchParams.get("search");
-    const sort = searchParams.get("sort") || "latest"; // latest | hot | liked
+    const sort = searchParams.get("sort") || "latest";
 
-    // 生成缓存 key
     const cacheKey = `posts:${page}:${pageSize}:${categoryId || ""}:${tagId || ""}:${search || ""}:${sort}`;
 
-    // 使用缓存
     const result = await cache.cached(
       cacheKey,
       async () => {
         const skip = (page - 1) * pageSize;
-
-        // 构建查询条件
-        const where: any = {
+        const where: Prisma.PostWhereInput = {
           published: true,
         };
 
@@ -47,14 +43,13 @@ export async function GET(request: NextRequest) {
           ];
         }
 
-        const orderBy =
+        const orderBy: Prisma.PostOrderByWithRelationInput[] =
           sort === "hot"
-            ? [{ viewCount: "desc" as const }, { publishedAt: "desc" as const }]
+            ? [{ viewCount: "desc" }, { publishedAt: "desc" }]
             : sort === "liked"
-              ? [{ likeCount: "desc" as const }, { publishedAt: "desc" as const }]
-              : { publishedAt: "desc" as const };
+              ? [{ likeCount: "desc" }, { publishedAt: "desc" }]
+              : [{ publishedAt: "desc" }];
 
-        // 获取文章列表
         const [posts, total] = await Promise.all([
           prisma.post.findMany({
             where,
@@ -91,7 +86,7 @@ export async function GET(request: NextRequest) {
           },
         };
       },
-      CACHE_TTL.SHORT // 30秒缓存
+      CACHE_TTL.SHORT,
     );
 
     return NextResponse.json(result, {
@@ -100,10 +95,11 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    console.error("Failed to fetch posts:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "获取文章列表失败",
+        error: error instanceof Error ? error.message : "Failed to fetch posts",
       },
       { status: 500 },
     );

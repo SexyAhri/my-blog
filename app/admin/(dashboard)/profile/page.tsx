@@ -1,103 +1,132 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  App,
+  Avatar,
+  Button,
   Card,
   Form,
   Input,
-  Button,
-  App,
   Spin,
-  Avatar,
-  Divider,
-  Space,
 } from "antd";
 import {
+  CameraOutlined,
+  LockOutlined,
   SaveOutlined,
   UserOutlined,
-  LockOutlined,
-  CameraOutlined,
 } from "@ant-design/icons";
-import { useSession, signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import ImagePicker from "@/components/admin/ImagePicker";
+import {
+  createOptionalImageSourceRule,
+  createRequiredTrimmedRule,
+} from "@/lib/admin-form-rules";
+import { PROFILE_LIMITS } from "@/lib/admin-validation";
+
+interface ProfileFormValues {
+  name: string;
+  email: string;
+  image?: string;
+}
+
+interface PasswordFormValues {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+interface ProfileData {
+  name: string;
+  email: string;
+  image?: string | null;
+}
+
+interface ProfileResponse {
+  success: boolean;
+  data?: ProfileData;
+  error?: string;
+}
 
 export default function ProfilePage() {
-  const [form] = Form.useForm();
-  const [passwordForm] = Form.useForm();
+  const [form] = Form.useForm<ProfileFormValues>();
+  const [passwordForm] = Form.useForm<PasswordFormValues>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [imagePickerVisible, setImagePickerVisible] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
-  const [userData, setUserData] = useState<any>(null);
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const { data: session, update } = useSession();
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     setLoading(true);
+
     try {
       const res = await fetch("/api/admin/profile");
-      const data = await res.json();
-      if (data.success) {
-        setUserData(data.data);
-        setAvatar(data.data.image);
-        form.setFieldsValue({
-          name: data.data.name,
-          email: data.data.email,
-        });
+      const data = (await res.json()) as ProfileResponse;
+
+      if (!data.success || !data.data) {
+        message.error(data.error || "Failed to load profile");
+        return;
       }
-    } catch (error) {
-      message.error("加载失败");
+
+      setAvatar(data.data.image || null);
+      form.setFieldsValue({
+        name: data.data.name,
+        email: data.data.email,
+        image: data.data.image || undefined,
+      });
+    } catch {
+      message.error("Failed to load profile");
     } finally {
       setLoading(false);
     }
-  };
+  }, [form, message]);
 
-  const handleSubmit = async (values: any) => {
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
+
+  const handleSubmit = async (values: ProfileFormValues) => {
     setSaving(true);
+
+    const nextAvatar = values.image?.trim() || null;
+
     try {
       const res = await fetch("/api/admin/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: values.name,
-          image: avatar,
+          image: nextAvatar,
         }),
       });
+      const data = (await res.json()) as ProfileResponse;
 
-      const data = await res.json();
       if (data.success) {
-        message.success("保存成功");
-        // 更新 session
+        message.success("Profile saved");
         await update({
           ...session,
           user: {
             ...session?.user,
             name: values.name,
-            image: avatar,
+            image: nextAvatar,
           },
         });
       } else {
-        message.error(data.error || "保存失败");
+        message.error(data.error || "Failed to save profile");
       }
-    } catch (error) {
-      message.error("保存失败");
+    } catch {
+      message.error("Failed to save profile");
     } finally {
       setSaving(false);
     }
   };
 
-  const handlePasswordSubmit = async (values: any) => {
-    if (values.newPassword !== values.confirmPassword) {
-      message.error("两次输入的密码不一致");
-      return;
-    }
-
+  const handlePasswordSubmit = async (values: PasswordFormValues) => {
     setSavingPassword(true);
+
     try {
       const res = await fetch("/api/admin/profile", {
         method: "PUT",
@@ -107,20 +136,23 @@ export default function ProfilePage() {
           newPassword: values.newPassword,
         }),
       });
+      const data = (await res.json()) as {
+        success: boolean;
+        error?: string;
+      };
 
-      const data = await res.json();
       if (data.success) {
-        message.success("密码修改成功，请重新登录");
+        message.success("Password updated. Please sign in again.");
         passwordForm.resetFields();
-        // 退出登录
+
         setTimeout(() => {
-          signOut({ callbackUrl: "/admin/login" });
+          void signOut({ callbackUrl: "/admin/login" });
         }, 1500);
       } else {
-        message.error(data.error || "修改失败");
+        message.error(data.error || "Failed to update password");
       }
-    } catch (error) {
-      message.error("修改失败");
+    } catch {
+      message.error("Failed to update password");
     } finally {
       setSavingPassword(false);
     }
@@ -130,16 +162,15 @@ export default function ProfilePage() {
     <Spin spinning={loading}>
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <h2 style={{ margin: "0 0 24px", fontSize: 20, fontWeight: 600 }}>
-          个人信息
+          Profile
         </h2>
 
-        {/* 基本信息 */}
-        <Card title="基本信息" style={{ marginBottom: 24 }}>
+        <Card title="Basic Information" style={{ marginBottom: 24 }}>
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <div style={{ position: "relative", display: "inline-block" }}>
               <Avatar
                 size={100}
-                src={avatar}
+                src={avatar || undefined}
                 icon={<UserOutlined />}
                 style={{ backgroundColor: "#2563eb" }}
               />
@@ -162,9 +193,12 @@ export default function ProfilePage() {
                   type="link"
                   danger
                   size="small"
-                  onClick={() => setAvatar(null)}
+                  onClick={() => {
+                    setAvatar(null);
+                    form.setFieldValue("image", undefined);
+                  }}
                 >
-                  移除头像
+                  Remove avatar
                 </Button>
               </div>
             )}
@@ -172,13 +206,32 @@ export default function ProfilePage() {
 
           <Form form={form} layout="vertical" onFinish={handleSubmit}>
             <Form.Item
-              label="用户名"
-              name="name"
-              rules={[{ required: true, message: "请输入用户名" }]}
+              name="image"
+              hidden
+              rules={[
+                createOptionalImageSourceRule("Avatar", PROFILE_LIMITS.avatar),
+              ]}
             >
-              <Input prefix={<UserOutlined />} placeholder="请输入用户名" />
+              <Input />
             </Form.Item>
-            <Form.Item label="邮箱" name="email">
+            <Form.Item
+              label="Name"
+              name="name"
+              rules={[
+                createRequiredTrimmedRule(
+                  "Display name",
+                  PROFILE_LIMITS.name,
+                ),
+              ]}
+            >
+              <Input
+                prefix={<UserOutlined />}
+                placeholder="Display name"
+                maxLength={PROFILE_LIMITS.name}
+                showCount
+              />
+            </Form.Item>
+            <Form.Item label="Email" name="email">
               <Input disabled />
             </Form.Item>
             <Form.Item style={{ marginBottom: 0 }}>
@@ -188,60 +241,77 @@ export default function ProfilePage() {
                 icon={<SaveOutlined />}
                 loading={saving}
               >
-                保存修改
+                Save Changes
               </Button>
             </Form.Item>
           </Form>
         </Card>
 
-        {/* 修改密码 */}
-        <Card title="修改密码">
+        <Card title="Change Password">
           <Form
             form={passwordForm}
             layout="vertical"
             onFinish={handlePasswordSubmit}
           >
             <Form.Item
-              label="当前密码"
+              label="Current Password"
               name="currentPassword"
-              rules={[{ required: true, message: "请输入当前密码" }]}
+              rules={[{ required: true, message: "Enter your current password" }]}
             >
               <Input.Password
                 prefix={<LockOutlined />}
-                placeholder="请输入当前密码"
+                placeholder="Current password"
               />
             </Form.Item>
             <Form.Item
-              label="新密码"
+              label="New Password"
               name="newPassword"
               rules={[
-                { required: true, message: "请输入新密码" },
-                { min: 6, message: "密码至少6位" },
+                { required: true, message: "Enter a new password" },
+                {
+                  min: PROFILE_LIMITS.passwordMin,
+                  message: `Password must be at least ${PROFILE_LIMITS.passwordMin} characters`,
+                },
+                {
+                  max: PROFILE_LIMITS.passwordMax,
+                  message: `Password must be ${PROFILE_LIMITS.passwordMax} characters or less`,
+                },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (!value || value !== getFieldValue("currentPassword")) {
+                      return Promise.resolve();
+                    }
+
+                    return Promise.reject(
+                      new Error(
+                        "New password must be different from the current password",
+                      ),
+                    );
+                  },
+                }),
               ]}
             >
-              <Input.Password
-                prefix={<LockOutlined />}
-                placeholder="请输入新密码"
-              />
+              <Input.Password prefix={<LockOutlined />} placeholder="New password" />
             </Form.Item>
             <Form.Item
-              label="确认新密码"
+              label="Confirm Password"
               name="confirmPassword"
               rules={[
-                { required: true, message: "请确认新密码" },
+                { required: true, message: "Confirm your new password" },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
                     if (!value || getFieldValue("newPassword") === value) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error("两次输入的密码不一致"));
+
+                    return Promise.reject(new Error("Passwords do not match"));
                   },
                 }),
               ]}
             >
               <Input.Password
                 prefix={<LockOutlined />}
-                placeholder="请再次输入新密码"
+                placeholder="Confirm new password"
               />
             </Form.Item>
             <Form.Item style={{ marginBottom: 0 }}>
@@ -251,7 +321,7 @@ export default function ProfilePage() {
                 icon={<LockOutlined />}
                 loading={savingPassword}
               >
-                修改密码
+                Update Password
               </Button>
             </Form.Item>
           </Form>
@@ -263,6 +333,7 @@ export default function ProfilePage() {
         onClose={() => setImagePickerVisible(false)}
         onSelect={(filepath) => {
           setAvatar(filepath);
+          form.setFieldValue("image", filepath);
           setImagePickerVisible(false);
         }}
         value={avatar || undefined}

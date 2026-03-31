@@ -154,7 +154,7 @@ export async function sendNewCommentNotification({
     }
 
     return { success: true, data };
-  } catch (error) {
+  } catch {
     return { success: false, error: "Failed to send email" };
   }
 }

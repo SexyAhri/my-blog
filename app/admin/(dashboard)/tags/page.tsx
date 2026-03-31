@@ -1,87 +1,103 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Row, Col, Tag, Button, Space, App } from "antd";
-import { TagsOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { useCallback, useEffect, useState } from "react";
+import { App, Button, Col, Row, Space, Tag } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import { PlusOutlined, ReloadOutlined, TagsOutlined } from "@ant-design/icons";
 import {
-  MetricCard,
   DataTable,
   FormDrawer,
   InputItem,
+  MetricCard,
 } from "@/components/common";
 import { generateSlug } from "@/lib/utils";
 
-interface TagType {
+interface TagItem {
   id: string;
   name: string;
   slug: string;
   _count?: { posts: number };
 }
 
+interface TagFormValues {
+  name: string;
+  slug: string;
+}
+
+interface TagsResponse {
+  success: boolean;
+  data: TagItem[];
+  error?: string;
+}
+
 export default function TagsPage() {
-  const [tags, setTags] = useState<TagType[]>([]);
+  const [tags, setTags] = useState<TagItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingTag, setEditingTag] = useState<TagType | null>(null);
+  const [editingTag, setEditingTag] = useState<TagItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const { message, modal } = App.useApp();
 
-  useEffect(() => {
-    loadTags();
-  }, []);
-
-  const loadTags = async () => {
+  const loadTags = useCallback(async () => {
     setLoading(true);
+
     try {
       const res = await fetch("/api/admin/tags");
-      const data = await res.json();
+      const data = (await res.json()) as TagsResponse;
       if (data.success) {
         setTags(data.data);
       }
-    } catch (error) {
-      message.error("加载失败");
+    } catch {
+      message.error("Failed to load tags");
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
 
-  const handleEdit = (record: TagType) => {
+  useEffect(() => {
+    void loadTags();
+  }, [loadTags]);
+
+  const handleEdit = (record: TagItem) => {
     setEditingTag(record);
     setDrawerOpen(true);
   };
 
   const handleDelete = (id: string) => {
     modal.confirm({
-      title: "确认删除",
-      content: "确定要删除这个标签吗？",
-      okText: "确定",
-      cancelText: "取消",
+      title: "Delete tag",
+      content: "This action cannot be undone. Continue?",
+      okText: "Delete",
+      cancelText: "Cancel",
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           const res = await fetch(`/api/admin/tags/${id}`, {
             method: "DELETE",
           });
-          const data = await res.json();
+          const data = (await res.json()) as {
+            success: boolean;
+            error?: string;
+          };
+
           if (data.success) {
-            message.success("删除成功");
-            loadTags();
+            message.success("Tag deleted");
+            await loadTags();
           } else {
-            message.error(data.error || "删除失败");
+            message.error(data.error || "Failed to delete tag");
           }
-        } catch (error) {
-          message.error("删除失败");
+        } catch {
+          message.error("Failed to delete tag");
         }
       },
     });
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: TagFormValues) => {
     setSubmitting(true);
+
     try {
-      const url = editingTag
-        ? `/api/admin/tags/${editingTag.id}`
-        : "/api/admin/tags";
+      const url = editingTag ? `/api/admin/tags/${editingTag.id}` : "/api/admin/tags";
       const method = editingTag ? "PUT" : "POST";
 
       const res = await fetch(url, {
@@ -90,60 +106,56 @@ export default function TagsPage() {
         body: JSON.stringify(values),
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as { success: boolean; error?: string };
+
       if (data.success) {
-        message.success(editingTag ? "更新成功" : "创建成功");
+        message.success(editingTag ? "Tag updated" : "Tag created");
         setDrawerOpen(false);
         setEditingTag(null);
-        loadTags();
+        await loadTags();
       } else {
-        message.error(data.error || "操作失败");
+        message.error(data.error || "Operation failed");
       }
-    } catch (error) {
-      message.error("操作失败");
+    } catch {
+      message.error("Operation failed");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const totalPosts = tags.reduce(
-    (sum, tag) => sum + (tag._count?.posts || 0),
-    0,
-  );
+  const totalPosts = tags.reduce((sum, tag) => sum + (tag._count?.posts || 0), 0);
 
-  const columns = [
+  const columns: ColumnsType<TagItem> = [
     {
-      title: "名称",
+      title: "Name",
       dataIndex: "name",
       key: "name",
       width: "30%",
       render: (text: string) => <Tag color="pink">{text}</Tag>,
     },
     {
-      title: "URL 别名",
+      title: "Slug",
       dataIndex: "slug",
       key: "slug",
       width: "30%",
-      render: (text: string) => (
-        <code style={{ color: "#1890ff" }}>{text}</code>
-      ),
+      render: (text: string) => <code style={{ color: "#1890ff" }}>{text}</code>,
     },
     {
-      title: "文章数",
+      title: "Posts",
       key: "posts",
       width: "20%",
-      render: (_: any, record: TagType) => (
-        <Tag color="blue">{record._count?.posts || 0} 篇</Tag>
+      render: (_value: unknown, record: TagItem) => (
+        <Tag color="blue">{record._count?.posts || 0}</Tag>
       ),
     },
     {
-      title: "操作",
+      title: "Actions",
       key: "action",
       width: "20%",
-      render: (_: any, record: TagType) => (
+      render: (_value: unknown, record: TagItem) => (
         <Space size="small">
           <Button type="link" size="small" onClick={() => handleEdit(record)}>
-            编辑
+            Edit
           </Button>
           <Button
             type="link"
@@ -151,7 +163,7 @@ export default function TagsPage() {
             danger
             onClick={() => handleDelete(record.id)}
           >
-            删除
+            Delete
           </Button>
         </Space>
       ),
@@ -163,7 +175,7 @@ export default function TagsPage() {
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12}>
           <MetricCard
-            title="标签总数"
+            title="Tags"
             value={tags.length}
             icon={<TagsOutlined />}
             color="#1890ff"
@@ -171,7 +183,7 @@ export default function TagsPage() {
         </Col>
         <Col xs={24} sm={12}>
           <MetricCard
-            title="文章总数"
+            title="Posts with Tags"
             value={totalPosts}
             icon={<TagsOutlined />}
             color="#52c41a"
@@ -179,12 +191,12 @@ export default function TagsPage() {
         </Col>
       </Row>
 
-      <DataTable
-        cardTitle="标签列表"
+      <DataTable<TagItem>
+        cardTitle="Tag List"
         cardExtra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={loadTags}>
-              刷新
+            <Button icon={<ReloadOutlined />} onClick={() => void loadTags()}>
+              Refresh
             </Button>
             <Button
               type="primary"
@@ -194,7 +206,7 @@ export default function TagsPage() {
                 setDrawerOpen(true);
               }}
             >
-              添加标签
+              Add Tag
             </Button>
           </Space>
         }
@@ -205,8 +217,8 @@ export default function TagsPage() {
         style={{ marginTop: 16 }}
       />
 
-      <FormDrawer
-        title={editingTag ? "编辑标签" : "添加标签"}
+      <FormDrawer<TagFormValues>
+        title={editingTag ? "Edit Tag" : "Add Tag"}
         open={drawerOpen}
         onClose={() => {
           setDrawerOpen(false);
@@ -214,25 +226,23 @@ export default function TagsPage() {
         }}
         onSubmit={handleSubmit}
         onValuesChange={(changedValues, allValues, form) => {
-          if (changedValues.name && !editingTag) {
+          void allValues;
+          if (typeof changedValues.name === "string" && !editingTag) {
             form.setFieldValue("slug", generateSlug(changedValues.name));
           }
         }}
-        initialValues={editingTag || {}}
+        initialValues={
+          editingTag
+            ? {
+                name: editingTag.name,
+                slug: editingTag.slug,
+              }
+            : {}
+        }
         loading={submitting}
       >
-        <InputItem
-          name="name"
-          label="标签名称"
-          required
-          placeholder="请输入标签名称"
-        />
-        <InputItem
-          name="slug"
-          label="URL 别名"
-          required
-          placeholder="请输入 URL 别名"
-        />
+        <InputItem name="name" label="Tag Name" required />
+        <InputItem name="slug" label="Slug" required />
       </FormDrawer>
     </div>
   );

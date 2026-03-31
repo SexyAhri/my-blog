@@ -18,31 +18,34 @@ const ThemeContext = createContext<{
 
 export const useTheme = () => useContext(ThemeContext);
 
-// 同步主题到 document，供博客前台 CSS 变量使用
 function ThemeSync({ themeMode }: { themeMode: ThemeMode }) {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", themeMode);
   }, [themeMode]);
+
   return null;
 }
 
 export function Providers({ children }: { children: ReactNode }) {
-  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
-
-  // 从 localStorage 恢复主题偏好
-  useEffect(() => {
-    const saved = localStorage.getItem("blog-theme") as ThemeMode | null;
-    if (saved === "light" || saved === "dark") {
-      setThemeMode(saved);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    if (typeof window === "undefined") {
+      return "light";
     }
-  }, []);
 
-  // 保存主题偏好
+    try {
+      const saved = localStorage.getItem("blog-theme");
+      return saved === "dark" ? "dark" : "light";
+    } catch {
+      return "light";
+    }
+  });
+
   useEffect(() => {
-    localStorage.setItem("blog-theme", themeMode);
+    try {
+      localStorage.setItem("blog-theme", themeMode);
+    } catch {}
   }, [themeMode]);
 
-  // 柔和的浅色主题 - 整体偏暖灰
   const lightTheme = {
     algorithm: theme.defaultAlgorithm,
     token: {
@@ -71,7 +74,6 @@ export function Providers({ children }: { children: ReactNode }) {
     },
   };
 
-  // 柔和的深色主题
   const darkTheme = {
     algorithm: theme.darkAlgorithm,
     token: {

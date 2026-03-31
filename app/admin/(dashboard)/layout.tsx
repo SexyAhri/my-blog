@@ -3,13 +3,12 @@
 import { App, Layout, Spin, theme } from "antd";
 import { signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 
 const { Content } = Layout;
-const ADMIN_ACCESS_KEY = process.env.NEXT_PUBLIC_ADMIN_ACCESS_KEY;
 
 export default function DashboardLayout({
   children,
@@ -21,23 +20,10 @@ export default function DashboardLayout({
   const { data: session, status } = useSession();
   const router = useRouter();
   const { message } = App.useApp();
-  const hasCheckedAccess = useRef(false);
 
   const isPostEditPage =
     pathname.includes("/posts/") &&
     (pathname.includes("/edit") || pathname.includes("/new"));
-
-  useEffect(() => {
-    if (hasCheckedAccess.current) return;
-    hasCheckedAccess.current = true;
-
-    if (ADMIN_ACCESS_KEY) {
-      const storedKey = sessionStorage.getItem("admin_access_key");
-      if (storedKey !== ADMIN_ACCESS_KEY) {
-        router.replace("/");
-      }
-    }
-  }, [router]);
 
   useEffect(() => {
     if (status === "unauthenticated") {

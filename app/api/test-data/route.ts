@@ -1,8 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/admin";
 
 export async function GET() {
   try {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        { success: false, message: "Not found" },
+        { status: 404 },
+      );
+    }
+
+    const admin = await requireAdmin();
+    if (admin.response) {
+      return admin.response;
+    }
+
     const [userCount, postCount, categoryCount, tagCount] = await Promise.all([
       prisma.user.count(),
       prisma.post.count(),

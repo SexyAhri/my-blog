@@ -1,9 +1,19 @@
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendNewCommentNotification } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
-// GET - 获取文章评论
+interface CommentRequestBody {
+  postId?: string;
+  slug?: string;
+  author?: string;
+  email?: string;
+  website?: string;
+  content?: string;
+  parentId?: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -12,12 +22,12 @@ export async function GET(request: NextRequest) {
 
     if (!postId && !slug) {
       return NextResponse.json(
-        { success: false, error: "缺少文章参数" },
+        { success: false, error: "Missing post identifier" },
         { status: 400 },
       );
     }
 
-    let whereClause: any = { approved: true };
+    const whereClause: Prisma.CommentWhereInput = { approved: true };
 
     if (postId) {
       whereClause.postId = postId;
@@ -26,14 +36,19 @@ export async function GET(request: NextRequest) {
         where: { slug },
         select: { id: true },
       });
+
       if (!post) {
         return NextResponse.json({ success: true, data: [] });
       }
+
       whereClause.postId = post.id;
     }
 
     const comments = await prisma.comment.findMany({
-      where: { ...whereClause, parentId: null },
+      where: {
+        ...whereClause,
+        parentId: null,
+      },
       orderBy: { createdAt: "desc" },
       include: {
         replies: {
@@ -45,55 +60,77 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: comments });
   } catch (error) {
+    console.error("Failed to fetch comments:", error);
     return NextResponse.json(
-      { success: false, error: "获取评论失败" },
+      { success: false, error: "Failed to fetch comments" },
       { status: 500 },
     );
   }
 }
 
-// POST - 提交评论
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request);
     const limit = rateLimit(`comment:${ip}`, { window: 60, max: 5 });
     if (!limit.success) {
       return NextResponse.json(
-        { success: false, error: "操作过于频繁，请稍后再试" },
-        { status: 429 }
+        { success: false, error: "Too many requests. Please try again later." },
+        { status: 429 },
       );
     }
 
-    const body = await request.json();
+    const body = (await request.json()) as CommentRequestBody;
     const { postId, slug, author, email, website, content, parentId } = body;
 
-    if (!author || !email || !content) {
+    if (!postId && !slug) {
       return NextResponse.json(
-        { success: false, error: "请填写必填字段" },
+        { success: false, error: "Missing post identifier" },
         { status: 400 },
       );
     }
 
-    let finalPostId = postId;
-    let post = null;
-    
+    if (!author || !email || !content) {
+      return NextResponse.json(
+        { success: false, error: "Author, email, and content are required" },
+        { status: 400 },
+      );
+    }
+
+    let finalPostId = postId ?? null;
+    let post:
+      | {
+          id: string;
+          title: string;
+          slug: string;
+        }
+      | null = null;
+
     if (!finalPostId && slug) {
       post = await prisma.post.findUnique({
         where: { slug },
         select: { id: true, title: true, slug: true },
       });
+
       if (!post) {
         return NextResponse.json(
-          { success: false, error: "文章不存在" },
+          { success: false, error: "Post not found" },
           { status: 404 },
         );
       }
+
       finalPostId = post.id;
     } else if (finalPostId) {
       post = await prisma.post.findUnique({
         where: { id: finalPostId },
         select: { id: true, title: true, slug: true },
       });
+    }
+
+    if (!finalPostId) {
+      return NextResponse.json(
+        { success: false, error: "Post not found" },
+        { status: 404 },
+      );
     }
 
     const comment = await prisma.comment.create({
@@ -104,11 +141,10 @@ export async function POST(request: NextRequest) {
         content,
         postId: finalPostId,
         parentId: parentId || null,
-        approved: false, // 默认需要审核
+        approved: false,
       },
     });
 
-    // 发送新评论通知给管理员
     if (post) {
       sendNewCommentNotification({
         postTitle: post.title,
@@ -122,11 +158,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: comment,
-      message: "评论已提交，等待审核",
+      message: "Comment submitted and waiting for review",
     });
   } catch (error) {
+    console.error("Failed to submit comment:", error);
     return NextResponse.json(
-      { success: false, error: "提交评论失败" },
+      { success: false, error: "Failed to submit comment" },
       { status: 500 },
     );
   }

@@ -2,6 +2,7 @@ import { compare, hash } from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
+import { parseProfileUpdateInput } from "@/lib/admin-payloads";
 
 export async function GET() {
   try {
@@ -48,8 +49,14 @@ export async function PUT(request: NextRequest) {
     }
 
     const session = admin.session!;
-    const body = await request.json();
-    const { name, image, currentPassword, newPassword } = body;
+    const body = await request.json().catch(() => null);
+    const parsed = parseProfileUpdateInput(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error },
+        { status: parsed.status },
+      );
+    }
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -64,23 +71,19 @@ export async function PUT(request: NextRequest) {
 
     const updateData: Record<string, string | null> = {};
 
-    if (name) {
-      updateData.name = name;
+    if (parsed.data.name !== undefined) {
+      updateData.name = parsed.data.name;
     }
 
-    if (image !== undefined) {
-      updateData.image = image || null;
+    if (parsed.data.image !== undefined) {
+      updateData.image = parsed.data.image;
     }
 
-    if (newPassword) {
-      if (!currentPassword) {
-        return NextResponse.json(
-          { success: false, error: "Current password is required" },
-          { status: 400 },
-        );
-      }
-
-      const isPasswordValid = await compare(currentPassword, user.password);
+    if (parsed.data.hasPasswordUpdate) {
+      const isPasswordValid = await compare(
+        parsed.data.currentPassword!,
+        user.password,
+      );
       if (!isPasswordValid) {
         return NextResponse.json(
           { success: false, error: "Current password is incorrect" },
@@ -88,14 +91,21 @@ export async function PUT(request: NextRequest) {
         );
       }
 
-      if (newPassword.length < 6) {
+      const isSamePassword = await compare(
+        parsed.data.newPassword!,
+        user.password,
+      );
+      if (isSamePassword) {
         return NextResponse.json(
-          { success: false, error: "New password must be at least 6 characters" },
+          {
+            success: false,
+            error: "New password must be different from the current password",
+          },
           { status: 400 },
         );
       }
 
-      updateData.password = await hash(newPassword, 12);
+      updateData.password = await hash(parsed.data.newPassword!, 12);
     }
 
     const updatedUser = await prisma.user.update({

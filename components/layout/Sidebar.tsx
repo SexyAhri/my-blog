@@ -1,78 +1,79 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Layout, Menu } from "antd";
+import type { MenuProps } from "antd";
 import {
-  DashboardOutlined,
-  FileTextOutlined,
-  FolderOutlined,
-  TagsOutlined,
-  PictureOutlined,
-  SettingOutlined,
-  HomeOutlined,
-  FileSearchOutlined,
-  MessageOutlined,
   BarChartOutlined,
   BookOutlined,
+  DashboardOutlined,
+  FileSearchOutlined,
+  FileTextOutlined,
+  FolderOutlined,
+  HomeOutlined,
+  MessageOutlined,
+  PictureOutlined,
+  SettingOutlined,
+  TagsOutlined,
 } from "@ant-design/icons";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
 import { useTheme } from "@/app/providers";
-import type { MenuProps } from "antd";
 
 const { Sider } = Layout;
 
 type MenuItem = Required<MenuProps>["items"][number];
+type KeyedMenuItem = Extract<NonNullable<MenuItem>, { key: string }>;
 
 const menuItems: MenuItem[] = [
   {
     key: "/admin",
     icon: <DashboardOutlined />,
-    label: <Link href="/admin">仪表盘</Link>,
+    label: <Link href="/admin">Dashboard</Link>,
   },
   {
     key: "/admin/posts",
     icon: <FileTextOutlined />,
-    label: <Link href="/admin/posts">文章管理</Link>,
+    label: <Link href="/admin/posts">Posts</Link>,
   },
   {
     key: "/admin/categories",
     icon: <FolderOutlined />,
-    label: <Link href="/admin/categories">分类管理</Link>,
+    label: <Link href="/admin/categories">Categories</Link>,
   },
   {
     key: "/admin/tags",
     icon: <TagsOutlined />,
-    label: <Link href="/admin/tags">标签管理</Link>,
+    label: <Link href="/admin/tags">Tags</Link>,
   },
   {
     key: "/admin/series",
     icon: <BookOutlined />,
-    label: <Link href="/admin/series">系列管理</Link>,
+    label: <Link href="/admin/series">Series</Link>,
   },
   {
     key: "/admin/media",
     icon: <PictureOutlined />,
-    label: <Link href="/admin/media">媒体库</Link>,
+    label: <Link href="/admin/media">Media</Link>,
   },
   {
     key: "/admin/comments",
     icon: <MessageOutlined />,
-    label: <Link href="/admin/comments">评论管理</Link>,
+    label: <Link href="/admin/comments">Comments</Link>,
   },
   {
     key: "/admin/stats",
     icon: <BarChartOutlined />,
-    label: <Link href="/admin/stats">访问统计</Link>,
+    label: <Link href="/admin/stats">Analytics</Link>,
   },
   {
     key: "/admin/settings",
     icon: <SettingOutlined />,
-    label: <Link href="/admin/settings">网站设置</Link>,
+    label: <Link href="/admin/settings">Settings</Link>,
   },
   {
     key: "/admin/logs",
     icon: <FileSearchOutlined />,
-    label: <Link href="/admin/logs">系统日志</Link>,
+    label: <Link href="/admin/logs">Logs</Link>,
   },
   {
     type: "divider",
@@ -82,31 +83,32 @@ const menuItems: MenuItem[] = [
     icon: <HomeOutlined />,
     label: (
       <Link href="/" target="_blank">
-        访问网站
+        View site
       </Link>
     ),
   },
 ];
+
+function hasStringKey(item: MenuItem): item is KeyedMenuItem {
+  return Boolean(item && "key" in item && typeof item.key === "string");
+}
 
 export function Sidebar() {
   const pathname = usePathname();
   const { themeMode } = useTheme();
 
   const getSelectedKey = () => {
-    if (pathname === "/admin") return "/admin";
+    if (pathname === "/admin") {
+      return "/admin";
+    }
 
-    const sortedItems = [...menuItems]
-      .filter((item) => item && "key" in item && item.key)
-      .sort((a, b) => {
-        const keyA = (a as any).key as string;
-        const keyB = (b as any).key as string;
-        return keyB.length - keyA.length;
-      });
+    const sortedItems = menuItems
+      .filter(hasStringKey)
+      .sort((first, second) => second.key.length - first.key.length);
 
     for (const item of sortedItems) {
-      const key = (item as any).key as string;
-      if (key !== "/admin" && pathname.startsWith(key)) {
-        return key;
+      if (item.key !== "/admin" && pathname.startsWith(item.key)) {
+        return item.key;
       }
     }
 

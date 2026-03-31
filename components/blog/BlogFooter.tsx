@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   GithubOutlined,
-  TwitterOutlined,
   MailOutlined,
+  TwitterOutlined,
   WeiboOutlined,
 } from "@ant-design/icons";
 
@@ -15,6 +15,15 @@ interface SocialLinks {
   weibo?: string;
   email?: string;
 }
+
+const FOOTER_LINKS = [
+  { href: "/", label: "Home" },
+  { href: "/categories", label: "Categories" },
+  { href: "/archive", label: "Archive" },
+  { href: "/about", label: "About" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/feed.xml", label: "RSS" },
+];
 
 export default function BlogFooter() {
   const currentYear = new Date().getFullYear();
@@ -42,7 +51,6 @@ export default function BlogFooter() {
     <footer className="blog-footer">
       <div className="blog-footer-container">
         <div className="blog-footer-content">
-          {/* Copyright */}
           <div className="blog-footer-section">
             <p>© {currentYear} VixenAhri</p>
             {icp && (
@@ -59,31 +67,16 @@ export default function BlogFooter() {
             )}
           </div>
 
-          {/* Links */}
           <div className="blog-footer-section">
             <ul>
-              <li>
-                <Link href="/">首页</Link>
-              </li>
-              <li>
-                <Link href="/categories">分类</Link>
-              </li>
-              <li>
-                <Link href="/archive">归档</Link>
-              </li>
-              <li>
-                <Link href="/about">关于</Link>
-              </li>
-              <li>
-                <Link href="/privacy">隐私政策</Link>
-              </li>
-              <li>
-                <Link href="/feed.xml">RSS</Link>
-              </li>
+              {FOOTER_LINKS.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href}>{item.label}</Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Social */}
           <div className="blog-footer-section">
             <div className="blog-footer-social">
               {social.github && (
@@ -111,7 +104,7 @@ export default function BlogFooter() {
                   href={social.weibo}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="微博"
+                  aria-label="Weibo"
                 >
                   <WeiboOutlined />
                 </a>

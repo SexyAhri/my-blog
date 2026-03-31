@@ -1,7 +1,6 @@
 version: "3.8"
 
 services:
-  # Watchtower - 自动更新容器
   watchtower:
     image: containrrr/watchtower:latest
     container_name: watchtower
@@ -13,7 +12,6 @@ services:
       - WATCHTOWER_POLL_INTERVAL=300
     command: --interval 300 --cleanup vixenahri-blog
 
-  # VixenAhri Blog - 博客应用
   vixenahri-blog:
     image: ahridocker/my-blog:latest
     container_name: vixenahri-blog
@@ -21,21 +19,19 @@ services:
     ports:
       - "5177:5177"
     environment:
-      # 数据库配置
       - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}/${DB_NAME:-myblog}
-      # NextAuth 配置
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:5177}
-      # 应用配置
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-http://localhost:5177}
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=5177
-      # 安全入口密钥
-      - NEXT_PUBLIC_ADMIN_ACCESS_KEY=${NEXT_PUBLIC_ADMIN_ACCESS_KEY:-VxAhri}
-    # 使用 host 网络模式访问宿主机数据库
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+      - ADMIN_NAME=${ADMIN_NAME:-Admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-change-me}
+      - ADMIN_ACCESS_KEY=${ADMIN_ACCESS_KEY:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - CRON_SECRET=${CRON_SECRET:-}
     network_mode: "host"
-    # 或者使用 extra_hosts（如果不想用 host 模式）
-    # extra_hosts:
-    #   - "host.docker.internal:host-gateway"
     volumes:
       - ./uploads:/app/public/uploads
     healthcheck:
@@ -45,7 +41,6 @@ services:
       retries: 3
       start_period: 40s
 
-  # Cloudflared - Cloudflare 隧道（可选）
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
@@ -54,11 +49,12 @@ services:
     profiles:
       - cloudflare
 
-# 使用方法：
-# 1. 创建 .env.local 文件并填写配置
-# 2. 启动服务：docker-compose up -d
-# 3. 启动包含 Cloudflare：docker-compose --profile cloudflare up -d
-# 4. 停止服务：docker-compose down
-# 5. 查看日志：docker-compose logs -f vixenahri-blog
-# 6. 重启服务：docker-compose restart vixenahri-blog
-# 7. 初始化数据库：docker exec -it vixenahri-blog npx prisma db push && npx prisma db seed
+# Usage
+# 1. Copy .env.local.example to .env.local and fill in the values
+# 2. Start the main stack: docker compose up -d
+# 3. Start with Cloudflare tunnel: docker compose --profile cloudflare up -d
+# 4. View logs: docker compose logs -f vixenahri-blog
+# 5. Stop the stack: docker compose down
+# 6. Initialize the database when needed:
+#    docker exec -it vixenahri-blog npm run db:push
+#    docker exec -it vixenahri-blog npm run db:seed

@@ -1,47 +1,83 @@
 "use client";
 
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
-import { Spin, Empty } from "antd";
+import { Empty, Spin } from "antd";
 import PostCard from "@/components/blog/PostCard";
 import BlogSidebar from "@/components/blog/BlogSidebar";
+
+interface Post {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  coverImage?: string;
+  publishedAt: string;
+  viewCount: number;
+  author: {
+    name: string;
+  };
+  category?: {
+    name: string;
+    slug: string;
+  };
+  tags?: Array<{
+    tag: {
+      name: string;
+      slug: string;
+    };
+  }>;
+}
+
+interface SearchResponse {
+  success: boolean;
+  data: Post[];
+  error?: string;
+}
 
 function SearchContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") || "";
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (query) {
-      searchPosts();
-    } else {
+  const searchPosts = useCallback(async () => {
+    if (!query) {
+      setPosts([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const data = (await res.json()) as SearchResponse;
+
+      if (data.success) {
+        setPosts(data.data);
+      } else {
+        setPosts([]);
+      }
+    } catch (error) {
+      console.error("Search failed:", error);
+      setPosts([]);
+    } finally {
       setLoading(false);
     }
   }, [query]);
 
-  const searchPosts = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-      const data = await res.json();
-      if (data.success) {
-        setPosts(data.data);
-      }
-    } catch (error) {
-      console.error("Search failed:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    void searchPosts();
+  }, [searchPosts]);
 
   if (!query) {
     return (
       <div className="blog-container">
         <div className="blog-content">
           <div className="blog-posts">
-            <h1 className="blog-page-title">搜索</h1>
-            <Empty description="请输入搜索关键词" />
+            <h1 className="blog-page-title">Search</h1>
+            <Empty description="Enter a keyword to search posts." />
           </div>
           <aside className="blog-aside">
             <BlogSidebar />
@@ -55,7 +91,7 @@ function SearchContent() {
     <div className="blog-container">
       <div className="blog-content">
         <div className="blog-posts">
-          <h1 className="blog-page-title">搜索：{query}</h1>
+          <h1 className="blog-page-title">Search: {query}</h1>
 
           {loading ? (
             <div style={{ textAlign: "center", padding: 40 }}>
@@ -64,7 +100,7 @@ function SearchContent() {
           ) : posts.length > 0 ? (
             <>
               <p style={{ color: "#666", marginBottom: 24 }}>
-                找到 {posts.length} 篇相关文章
+                Found {posts.length} matching posts.
               </p>
               <div className="blog-post-list">
                 {posts.map((post) => (
@@ -73,7 +109,7 @@ function SearchContent() {
               </div>
             </>
           ) : (
-            <Empty description={`没有找到与"${query}"相关的文章`} />
+            <Empty description={`No posts found for "${query}".`} />
           )}
         </div>
         <aside className="blog-aside">

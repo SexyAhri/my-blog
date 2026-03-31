@@ -1,21 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Drawer, Button, Form, Row, theme, ConfigProvider } from "antd";
-import { FullscreenOutlined, FullscreenExitOutlined } from "@ant-design/icons";
-import type { FormProps } from "antd";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  Drawer,
+  Button,
+  ConfigProvider,
+  Form,
+  Row,
+  theme,
+  type FormInstance,
+  type FormProps,
+} from "antd";
+import {
+  FullscreenExitOutlined,
+  FullscreenOutlined,
+} from "@ant-design/icons";
 
-interface FormDrawerProps {
+interface FormDrawerProps<FormValues extends object> {
   title: string;
   open: boolean;
   onClose: () => void;
-  onSubmit?: (values: any) => void | Promise<void>;
-  onValuesChange?: (changedValues: any, allValues: any, form: ReturnType<typeof Form.useForm>[0]) => void;
+  onSubmit?: (values: FormValues) => void | Promise<void>;
+  onValuesChange?: (
+    changedValues: Partial<FormValues>,
+    allValues: FormValues,
+    form: FormInstance<FormValues>,
+  ) => void;
   width?: string;
   children: ReactNode;
-  initialValues?: Record<string, any>;
-  formProps?: Omit<FormProps, "form" | "initialValues">;
+  initialValues?: Parameters<FormInstance<FormValues>["setFieldsValue"]>[0];
+  formProps?: Omit<
+    FormProps<FormValues>,
+    "form" | "initialValues" | "onValuesChange"
+  >;
   submitText?: string;
   cancelText?: string;
   loading?: boolean;
@@ -23,7 +40,9 @@ interface FormDrawerProps {
   labelLayout?: "top" | "left" | "hidden";
 }
 
-export function FormDrawer({
+export function FormDrawer<
+  FormValues extends object = Record<string, unknown>,
+>({
   title,
   open,
   onClose,
@@ -33,25 +52,25 @@ export function FormDrawer({
   children,
   initialValues,
   formProps,
-  submitText = "确定",
-  cancelText = "取消",
+  submitText = "Submit",
+  cancelText = "Cancel",
   loading = false,
   footer,
   labelLayout = "left",
-}: FormDrawerProps) {
+}: FormDrawerProps<FormValues>) {
   const { token } = theme.useToken();
   const [isFullscreen, setIsFullscreen] = useState(true);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<FormValues>();
 
-  // 当 drawer 打开时，设置表单值
   useEffect(() => {
     if (open && initialValues) {
       form.setFieldsValue(initialValues);
     }
+
     if (!open) {
       form.resetFields();
     }
-  }, [open, initialValues, form]);
+  }, [form, initialValues, open]);
 
   const formLayout = labelLayout === "top" ? "vertical" : "horizontal";
   const labelCol =
@@ -71,8 +90,8 @@ export function FormDrawer({
     try {
       const values = await form.validateFields();
       await onSubmit?.(values);
-    } catch (error) {
-      // 验证失败，不做处理
+    } catch {
+      // Validation errors are handled by Ant Design form items.
     }
   };
 
@@ -115,12 +134,12 @@ export function FormDrawer({
           icon={
             isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />
           }
-          onClick={() => setIsFullscreen(!isFullscreen)}
+          onClick={() => setIsFullscreen((current) => !current)}
         />
       }
       footer={footer !== undefined ? footer : defaultFooter}
     >
-      <Form
+      <Form<FormValues>
         form={form}
         layout={formLayout}
         labelCol={labelCol}
@@ -136,7 +155,6 @@ export function FormDrawer({
   );
 }
 
-// 详情抽屉
 interface DetailDrawerProps {
   title: string;
   open: boolean;
@@ -186,7 +204,7 @@ export function DetailDrawer({
           icon={
             isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />
           }
-          onClick={() => setIsFullscreen(!isFullscreen)}
+          onClick={() => setIsFullscreen((current) => !current)}
         />
       }
       footer={footer}
@@ -196,7 +214,6 @@ export function DetailDrawer({
   );
 }
 
-// 查看抽屉（只读模式）
 interface ViewDrawerProps {
   title: string;
   open: boolean;
@@ -260,12 +277,12 @@ export function ViewDrawer({
           icon={
             isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />
           }
-          onClick={() => setIsFullscreen(!isFullscreen)}
+          onClick={() => setIsFullscreen((current) => !current)}
         />
       }
       footer={
         <div style={{ display: "flex", justifyContent: "center" }}>
-          <Button onClick={onClose}>关闭</Button>
+          <Button onClick={onClose}>Close</Button>
         </div>
       }
     >

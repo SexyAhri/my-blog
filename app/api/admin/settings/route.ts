@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
+import { parseSettingsUpdateInput } from "@/lib/admin-payloads";
 
 export async function GET() {
   try {
@@ -33,12 +34,20 @@ export async function POST(request: NextRequest) {
       return admin.response;
     }
 
-    const body = await request.json();
-    const updates = Object.entries(body).map(([key, value]) =>
+    const body = await request.json().catch(() => null);
+    const parsed = parseSettingsUpdateInput(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error },
+        { status: parsed.status },
+      );
+    }
+
+    const updates = Object.entries(parsed.data.values).map(([key, value]) =>
       prisma.setting.upsert({
         where: { key },
-        update: { value: value as string },
-        create: { key, value: value as string },
+        update: { value },
+        create: { key, value },
       }),
     );
 

@@ -1,13 +1,17 @@
+import { cache } from "react";
 import type { Metadata } from "next";
 import BlogHeader from "@/components/blog/BlogHeader";
 import BlogFooter from "@/components/blog/BlogFooter";
 import Analytics from "@/components/blog/Analytics";
 import { prisma } from "@/lib/prisma";
-import { cache } from "react";
+import {
+  DEFAULT_SITE_AUTHOR,
+  DEFAULT_SITE_DESCRIPTION,
+  DEFAULT_SITE_KEYWORDS,
+  DEFAULT_SITE_NAME,
+  SITE_URL,
+} from "@/lib/site-config";
 
-const SITE_URL = "https://blog.vixenahri.cn";
-
-// React cache 去重：generateMetadata 和 BlogLayout 共享同一次查询
 const getSiteSettings = cache(async () => {
   const settings = await prisma.setting.findMany({
     where: {
@@ -16,31 +20,34 @@ const getSiteSettings = cache(async () => {
       },
     },
   });
+
   const map: Record<string, string> = {};
-  settings.forEach((s) => {
-    map[s.key] = s.value;
+  settings.forEach((setting) => {
+    map[setting.key] = setting.value;
   });
+
   return map;
 });
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const settingsMap = await getSiteSettings();
-
+    const siteName = settingsMap.siteName || DEFAULT_SITE_NAME;
+    const siteDescription =
+      settingsMap.siteDescription || DEFAULT_SITE_DESCRIPTION;
     const siteUrl = settingsMap.siteUrl || SITE_URL;
+    const keywords =
+      settingsMap.siteKeywords?.split(",").map((item) => item.trim()).filter(Boolean) ||
+      DEFAULT_SITE_KEYWORDS;
 
     return {
       title: {
-        default: settingsMap.siteName || "VixenAhri Blog",
-        template: `%s | ${settingsMap.siteName || "VixenAhri Blog"}`,
+        default: siteName,
+        template: `%s | ${siteName}`,
       },
-      description: settingsMap.siteDescription || "VixenAhri 的个人博客",
-      keywords: settingsMap.siteKeywords?.split(",") || [
-        "博客",
-        "技术",
-        "分享",
-      ],
-      authors: [{ name: "VixenAhri" }],
+      description: siteDescription,
+      keywords,
+      authors: [{ name: DEFAULT_SITE_AUTHOR }],
       metadataBase: new URL(siteUrl),
       alternates: {
         canonical: siteUrl,
@@ -49,17 +56,17 @@ export async function generateMetadata(): Promise<Metadata> {
         },
       },
       openGraph: {
-        title: settingsMap.siteName || "VixenAhri Blog",
-        description: settingsMap.siteDescription || "VixenAhri 的个人博客",
+        title: siteName,
+        description: siteDescription,
         type: "website",
         url: siteUrl,
-        siteName: settingsMap.siteName || "VixenAhri Blog",
+        siteName,
         locale: "zh_CN",
       },
       twitter: {
         card: "summary_large_image",
-        title: settingsMap.siteName || "VixenAhri Blog",
-        description: settingsMap.siteDescription || "VixenAhri 的个人博客",
+        title: siteName,
+        description: siteDescription,
         creator: "@VixenAhri",
       },
       robots: {
@@ -76,8 +83,8 @@ export async function generateMetadata(): Promise<Metadata> {
     };
   } catch {
     return {
-      title: "VixenAhri Blog",
-      description: "VixenAhri 的个人博客",
+      title: DEFAULT_SITE_NAME,
+      description: DEFAULT_SITE_DESCRIPTION,
     };
   }
 }
@@ -87,19 +94,17 @@ export default async function BlogLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // 获取网站设置用于 JSON-LD
-  let siteName = "VixenAhri Blog";
-  let siteDescription = "VixenAhri 的个人博客";
+  let siteName = DEFAULT_SITE_NAME;
+  let siteDescription = DEFAULT_SITE_DESCRIPTION;
 
   try {
     const settingsMap = await getSiteSettings();
     siteName = settingsMap.siteName || siteName;
     siteDescription = settingsMap.siteDescription || siteDescription;
   } catch {
-    // 使用默认值
+    // Fall back to the shared site defaults.
   }
 
-  // 网站级别的 JSON-LD 结构化数据
   const websiteJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -108,7 +113,7 @@ export default async function BlogLayout({
     url: SITE_URL,
     author: {
       "@type": "Person",
-      name: "VixenAhri",
+      name: DEFAULT_SITE_AUTHOR,
       url: SITE_URL,
     },
     potentialAction: {
@@ -124,7 +129,7 @@ export default async function BlogLayout({
   const personJsonLd = {
     "@context": "https://schema.org",
     "@type": "Person",
-    name: "VixenAhri",
+    name: DEFAULT_SITE_AUTHOR,
     url: SITE_URL,
     sameAs: ["https://github.com/SexyAhri"],
   };

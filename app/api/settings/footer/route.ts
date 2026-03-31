@@ -21,7 +21,7 @@ export async function GET() {
     });
 
     return NextResponse.json({ success: true, ...result });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ success: false });
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateSlug } from "@/lib/utils";
 import { requireAdmin } from "@/lib/admin";
+import { parseSeriesMutationInput } from "@/lib/admin-payloads";
 
 export async function PUT(
   request: NextRequest,
@@ -14,20 +14,34 @@ export async function PUT(
     }
 
     const { id } = await params;
-    const { name, slug, description, coverImage } = await request.json();
+    const body = await request.json().catch(() => null);
+    const parsed = parseSeriesMutationInput(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error },
+        { status: parsed.status },
+      );
+    }
 
     const series = await prisma.series.update({
       where: { id },
       data: {
-        name,
-        slug: generateSlug(slug),
-        description,
-        coverImage,
+        name: parsed.data.name,
+        slug: parsed.data.slug,
+        description: parsed.data.description,
+        coverImage: parsed.data.coverImage,
       },
     });
 
     return NextResponse.json({ success: true, data: series });
   } catch (error: unknown) {
+    if ((error as { code?: string })?.code === "P2025") {
+      return NextResponse.json(
+        { success: false, error: "Series not found" },
+        { status: 404 },
+      );
+    }
+
     if ((error as { code?: string })?.code === "P2002") {
       return NextResponse.json(
         { success: false, error: "Series name or slug already exists" },

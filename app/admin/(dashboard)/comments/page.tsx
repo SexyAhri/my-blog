@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Table, Tag, Button, Space, App, Tabs, Card } from "antd";
+import { useCallback, useEffect, useState } from "react";
+import { App, Button, Card, Space, Table, Tabs, Tag } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   CheckOutlined,
   CloseOutlined,
@@ -9,40 +10,63 @@ import {
   MessageOutlined,
 } from "@ant-design/icons";
 
-interface Comment {
+interface CommentRecord {
   id: string;
   author: string;
   email: string;
   content: string;
   approved: boolean;
   createdAt: string;
-  post?: { title: string; slug: string };
+  post?: {
+    title: string;
+    slug: string;
+  } | null;
+}
+
+interface CommentsResponse {
+  success: boolean;
+  data: CommentRecord[];
+  error?: string;
+}
+
+interface MutationResponse {
+  success: boolean;
+  error?: string;
 }
 
 export default function CommentsPage() {
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<CommentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("pending");
   const { message, modal } = App.useApp();
 
-  useEffect(() => {
-    loadComments(activeTab);
-  }, [activeTab]);
+  const loadComments = useCallback(
+    async (status: string) => {
+      setLoading(true);
 
-  const loadComments = async (status: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/comments?status=${status}`);
-      const data = await res.json();
-      if (data.success) {
-        setComments(data.data);
+      try {
+        const res = await fetch(`/api/admin/comments?status=${status}`);
+        const data = (await res.json()) as CommentsResponse;
+
+        if (data.success) {
+          setComments(data.data);
+        } else {
+          setComments([]);
+          message.error(data.error || "Failed to load comments");
+        }
+      } catch {
+        setComments([]);
+        message.error("Failed to load comments");
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      message.error("加载失败");
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [message],
+  );
+
+  useEffect(() => {
+    void loadComments(activeTab);
+  }, [activeTab, loadComments]);
 
   const handleApprove = async (id: string, approved: boolean) => {
     try {
@@ -51,47 +75,53 @@ export default function CommentsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ approved }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as MutationResponse;
+
       if (data.success) {
-        message.success(approved ? "已通过" : "已拒绝");
-        loadComments(activeTab);
+        message.success(approved ? "Comment approved" : "Comment moved back to pending");
+        await loadComments(activeTab);
+      } else {
+        message.error(data.error || "Action failed");
       }
-    } catch (error) {
-      message.error("操作失败");
+    } catch {
+      message.error("Action failed");
     }
   };
 
   const handleDelete = (id: string) => {
     modal.confirm({
-      title: "确认删除",
-      content: "确定要删除这条评论吗？",
-      okText: "确定",
-      cancelText: "取消",
+      title: "Delete comment",
+      content: "This action cannot be undone. Continue?",
+      okText: "Delete",
+      cancelText: "Cancel",
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           const res = await fetch(`/api/admin/comments/${id}`, {
             method: "DELETE",
           });
-          const data = await res.json();
+          const data = (await res.json()) as MutationResponse;
+
           if (data.success) {
-            message.success("已删除");
-            loadComments(activeTab);
+            message.success("Comment deleted");
+            await loadComments(activeTab);
+          } else {
+            message.error(data.error || "Delete failed");
           }
-        } catch (error) {
-          message.error("删除失败");
+        } catch {
+          message.error("Delete failed");
         }
       },
     });
   };
 
-  const columns = [
+  const columns: ColumnsType<CommentRecord> = [
     {
-      title: "评论内容",
+      title: "Comment",
       dataIndex: "content",
       key: "content",
       ellipsis: true,
-      render: (text: string, record: Comment) => (
+      render: (text, record) => (
         <div>
           <div style={{ fontWeight: 500 }}>{record.author}</div>
           <div style={{ fontSize: 12, color: "#666" }}>{record.email}</div>
@@ -100,44 +130,45 @@ export default function CommentsPage() {
       ),
     },
     {
-      title: "文章",
+      title: "Post",
       dataIndex: ["post", "title"],
       key: "post",
       width: 240,
       ellipsis: true,
+      render: (text?: string) => text || <span style={{ color: "#999" }}>Unknown</span>,
     },
     {
-      title: "状态",
+      title: "Status",
       dataIndex: "approved",
       key: "approved",
-      width: 80,
+      width: 110,
       render: (approved: boolean) => (
         <Tag color={approved ? "success" : "warning"}>
-          {approved ? "已通过" : "待审核"}
+          {approved ? "Approved" : "Pending"}
         </Tag>
       ),
     },
     {
-      title: "时间",
+      title: "Created",
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
       render: (date: string) => new Date(date).toLocaleString("zh-CN"),
     },
     {
-      title: "操作",
+      title: "Actions",
       key: "action",
-      width: 150,
-      render: (_: any, record: Comment) => (
+      width: 180,
+      render: (_value, record) => (
         <Space size="small">
           {!record.approved && (
             <Button
               type="link"
               size="small"
               icon={<CheckOutlined />}
-              onClick={() => handleApprove(record.id, true)}
+              onClick={() => void handleApprove(record.id, true)}
             >
-              通过
+              Approve
             </Button>
           )}
           {record.approved && (
@@ -145,9 +176,9 @@ export default function CommentsPage() {
               type="link"
               size="small"
               icon={<CloseOutlined />}
-              onClick={() => handleApprove(record.id, false)}
+              onClick={() => void handleApprove(record.id, false)}
             >
-              拒绝
+              Revoke
             </Button>
           )}
           <Button
@@ -157,14 +188,12 @@ export default function CommentsPage() {
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record.id)}
           >
-            删除
+            Delete
           </Button>
         </Space>
       ),
     },
   ];
-
-  const pendingCount = comments.filter((c) => !c.approved).length;
 
   return (
     <Card>
@@ -176,17 +205,12 @@ export default function CommentsPage() {
             key: "pending",
             label: (
               <span>
-                <MessageOutlined /> 待审核
-                {activeTab !== "pending" && pendingCount > 0 && (
-                  <Tag color="red" style={{ marginLeft: 8 }}>
-                    {pendingCount}
-                  </Tag>
-                )}
+                <MessageOutlined /> Pending
               </span>
             ),
           },
-          { key: "approved", label: "已通过" },
-          { key: "all", label: "全部" },
+          { key: "approved", label: "Approved" },
+          { key: "all", label: "All" },
         ]}
       />
       <Table

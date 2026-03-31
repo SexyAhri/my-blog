@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Pagination, Spin, Empty } from "antd";
+import { Empty, Pagination, Spin } from "antd";
 import { FolderOutlined } from "@ant-design/icons";
 import PostCard from "@/components/blog/PostCard";
 import BlogSidebar from "@/components/blog/BlogSidebar";
@@ -30,9 +30,30 @@ interface Post {
   }>;
 }
 
+interface CategorySummary {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface CategoriesResponse {
+  success: boolean;
+  data: CategorySummary[];
+  error?: string;
+}
+
+interface PostsResponse {
+  success: boolean;
+  data: Post[];
+  pagination: {
+    total: number;
+  };
+  error?: string;
+}
+
 export default function CategoryPage() {
-  const params = useParams();
-  const slug = params.slug as string;
+  const params = useParams<{ slug: string }>();
+  const slug = params.slug;
   const [posts, setPosts] = useState<Post[]>([]);
   const [categoryName, setCategoryName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -40,62 +61,73 @@ export default function CategoryPage() {
   const [total, setTotal] = useState(0);
   const pageSize = 10;
 
-  useEffect(() => {
-    if (slug) {
-      loadCategory();
-      loadPosts();
+  const loadCategoryPage = useCallback(async () => {
+    if (!slug) {
+      setPosts([]);
+      setCategoryName("");
+      setTotal(0);
+      setLoading(false);
+      return;
     }
-  }, [slug, page]);
 
-  const loadCategory = async () => {
-    try {
-      const res = await fetch("/api/categories");
-      const data = await res.json();
-      if (data.success) {
-        const category = data.data.find((c: any) => c.slug === slug);
-        if (category) {
-          setCategoryName(category.name);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load category:", error);
-    }
-  };
-
-  const loadPosts = async () => {
     setLoading(true);
+
     try {
-      const res = await fetch("/api/categories");
-      const categoriesData = await res.json();
-      if (categoriesData.success) {
-        const category = categoriesData.data.find((c: any) => c.slug === slug);
-        if (category) {
-          const postsRes = await fetch(
-            `/api/posts?categoryId=${category.id}&page=${page}&pageSize=${pageSize}`,
-          );
-          const postsData = await postsRes.json();
-          if (postsData.success) {
-            setPosts(postsData.data);
-            setTotal(postsData.pagination.total);
-          }
-        }
+      const categoriesRes = await fetch("/api/categories");
+      const categoriesData = (await categoriesRes.json()) as CategoriesResponse;
+
+      if (!categoriesData.success) {
+        setPosts([]);
+        setCategoryName("");
+        setTotal(0);
+        return;
+      }
+
+      const category = categoriesData.data.find((item) => item.slug === slug);
+
+      if (!category) {
+        setPosts([]);
+        setCategoryName("");
+        setTotal(0);
+        return;
+      }
+
+      setCategoryName(category.name);
+
+      const postsRes = await fetch(
+        `/api/posts?categoryId=${category.id}&page=${page}&pageSize=${pageSize}`,
+      );
+      const postsData = (await postsRes.json()) as PostsResponse;
+
+      if (postsData.success) {
+        setPosts(postsData.data);
+        setTotal(postsData.pagination.total);
+      } else {
+        setPosts([]);
+        setTotal(0);
       }
     } catch (error) {
-      console.error("Failed to load posts:", error);
+      console.error("Failed to load category page:", error);
+      setPosts([]);
+      setCategoryName("");
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, slug]);
+
+  useEffect(() => {
+    void loadCategoryPage();
+  }, [loadCategoryPage]);
 
   return (
     <div className="blog-container">
       <div className="blog-content-inner">
         <div className="blog-posts">
-          {/* Category Header */}
           <div className="category-header">
             <FolderOutlined style={{ fontSize: 32, color: "#722ed1" }} />
-            <h1>{categoryName || "分类"}</h1>
-            <p>共 {total} 篇文章</p>
+            <h1>{categoryName || "Category"}</h1>
+            <p>{total} posts</p>
           </div>
 
           {loading ? (
@@ -103,7 +135,7 @@ export default function CategoryPage() {
               <Spin size="large" />
             </div>
           ) : posts.length === 0 ? (
-            <Empty description="该分类下暂无文章" />
+            <Empty description="No posts found in this category." />
           ) : (
             <>
               {posts.map((post) => (
@@ -118,7 +150,7 @@ export default function CategoryPage() {
                     pageSize={pageSize}
                     onChange={setPage}
                     showSizeChanger={false}
-                    showTotal={(t) => `共 ${t} 篇文章`}
+                    showTotal={(count) => `${count} posts`}
                   />
                 </div>
               )}

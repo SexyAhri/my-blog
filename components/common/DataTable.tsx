@@ -63,13 +63,15 @@ export function DataTable<T extends object>({
             showPagination
               ? {
                   pageSize,
-                  showTotal: (t) => (
+                  showTotal: (total) => (
                     <span
                       style={{ fontSize: 13, color: token.colorTextSecondary }}
                     >
-                      共{" "}
-                      <strong style={{ color: token.colorPrimary }}>{t}</strong>{" "}
-                      条
+                      Total{" "}
+                      <strong style={{ color: token.colorPrimary }}>
+                        {total}
+                      </strong>{" "}
+                      items
                     </span>
                   ),
                   style: { marginRight: 16, marginBottom: 8 },

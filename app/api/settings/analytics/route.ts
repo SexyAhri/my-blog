@@ -11,7 +11,7 @@ export async function GET() {
       success: true,
       code: setting?.value || null,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ success: false, code: null });
   }
 }

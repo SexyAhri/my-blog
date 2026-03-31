@@ -1,25 +1,69 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  App,
+  Button,
   Card,
   Form,
-  Input,
-  Button,
-  App,
-  Spin,
-  Tabs,
-  Switch,
-  InputNumber,
   Image,
+  Input,
+  InputNumber,
+  Spin,
+  Switch,
+  Tabs,
 } from "antd";
-import { SaveOutlined, PictureOutlined } from "@ant-design/icons";
+import { PictureOutlined, SaveOutlined } from "@ant-design/icons";
 import ImagePicker from "@/components/admin/ImagePicker";
+import {
+  createIntegerRangeRule,
+  createKeywordsRule,
+  createOptionalEmailRule,
+  createOptionalHttpUrlRule,
+  createOptionalImageSourceRule,
+  createOptionalTrimmedRule,
+  createRequiredTrimmedRule,
+} from "@/lib/admin-form-rules";
+import {
+  POSTS_PER_PAGE_RANGE,
+  SETTINGS_LIMITS,
+} from "@/lib/admin-validation";
+import { DEFAULT_ADMIN_SETTINGS } from "@/lib/site-config";
 
 const { TextArea } = Input;
 
+interface SettingsFormValues {
+  siteName?: string;
+  siteDescription?: string;
+  siteKeywords?: string;
+  siteUrl?: string;
+  siteAuthor?: string;
+  siteEmail?: string;
+  siteIcp?: string;
+  siteAnalytics?: string;
+  postsPerPage?: number;
+  enableComments?: boolean;
+  enableRss?: boolean;
+  enableSitemap?: boolean;
+  socialGithub?: string;
+  socialTwitter?: string;
+  socialWeibo?: string;
+  socialEmail?: string;
+  siteProfileBanner?: string;
+  siteMotto?: string;
+  siteAvatar?: string;
+}
+
+interface SettingsResponse {
+  success: boolean;
+  data?: Record<string, string>;
+  error?: string;
+}
+
+const DEFAULT_SETTINGS: SettingsFormValues = { ...DEFAULT_ADMIN_SETTINGS };
+
 export default function SettingsPage() {
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<SettingsFormValues>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
@@ -27,52 +71,61 @@ export default function SettingsPage() {
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const { message } = App.useApp();
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     setLoading(true);
+
     try {
       const res = await fetch("/api/admin/settings");
-      const data = await res.json();
-      if (data.success) {
-        form.setFieldsValue({
-          siteName: data.data.siteName || "我的博客",
-          siteDescription:
-            data.data.siteDescription || "一个基于 Next.js 的个人博客",
-          siteKeywords: data.data.siteKeywords || "博客,技术,分享",
-          siteUrl: data.data.siteUrl || "",
-          siteAuthor: data.data.siteAuthor || "",
-          siteEmail: data.data.siteEmail || "",
-          siteIcp: data.data.siteIcp || "",
-          siteAnalytics: data.data.siteAnalytics || "",
-          postsPerPage: parseInt(data.data.postsPerPage || "10"),
-          enableComments: data.data.enableComments === "true",
-          enableRss: data.data.enableRss === "true",
-          enableSitemap: data.data.enableSitemap === "true",
-          socialGithub: data.data.socialGithub || "",
-          socialTwitter: data.data.socialTwitter || "",
-          socialWeibo: data.data.socialWeibo || "",
-          socialEmail: data.data.socialEmail || "",
-          siteProfileBanner: data.data.siteProfileBanner || "",
-          siteMotto: data.data.siteMotto || "记录与分享，让技术更有温度",
-          siteAvatar: data.data.siteAvatar || "",
-        });
+      const data = (await res.json()) as SettingsResponse;
+
+      if (!data.success || !data.data) {
+        message.error(data.error || "Failed to load settings");
+        form.setFieldsValue(DEFAULT_SETTINGS);
+        return;
       }
-    } catch (error) {
-      message.error("加载失败");
+
+      form.setFieldsValue({
+        siteName: data.data.siteName || DEFAULT_SETTINGS.siteName,
+        siteDescription:
+          data.data.siteDescription || DEFAULT_SETTINGS.siteDescription,
+        siteKeywords: data.data.siteKeywords || DEFAULT_SETTINGS.siteKeywords,
+        siteUrl: data.data.siteUrl || DEFAULT_SETTINGS.siteUrl,
+        siteAuthor: data.data.siteAuthor || DEFAULT_SETTINGS.siteAuthor,
+        siteEmail: data.data.siteEmail || DEFAULT_SETTINGS.siteEmail,
+        siteIcp: data.data.siteIcp || DEFAULT_SETTINGS.siteIcp,
+        siteAnalytics: data.data.siteAnalytics || DEFAULT_SETTINGS.siteAnalytics,
+        postsPerPage: Number.parseInt(data.data.postsPerPage || "10", 10),
+        enableComments: data.data.enableComments !== "false",
+        enableRss: data.data.enableRss !== "false",
+        enableSitemap: data.data.enableSitemap !== "false",
+        socialGithub: data.data.socialGithub || DEFAULT_SETTINGS.socialGithub,
+        socialTwitter: data.data.socialTwitter || DEFAULT_SETTINGS.socialTwitter,
+        socialWeibo: data.data.socialWeibo || DEFAULT_SETTINGS.socialWeibo,
+        socialEmail: data.data.socialEmail || DEFAULT_SETTINGS.socialEmail,
+        siteProfileBanner:
+          data.data.siteProfileBanner || DEFAULT_SETTINGS.siteProfileBanner,
+        siteMotto: data.data.siteMotto || DEFAULT_SETTINGS.siteMotto,
+        siteAvatar: data.data.siteAvatar || DEFAULT_SETTINGS.siteAvatar,
+      });
+    } catch {
+      message.error("Failed to load settings");
+      form.setFieldsValue(DEFAULT_SETTINGS);
     } finally {
       setLoading(false);
     }
-  };
+  }, [form, message]);
 
-  const handleSubmit = async (values: any) => {
+  useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
+
+  const handleSubmit = async (values: SettingsFormValues) => {
     setSaving(true);
+
     try {
-      const settings = {
+      const payload = {
         ...values,
-        postsPerPage: values.postsPerPage?.toString() || "10",
+        postsPerPage: String(values.postsPerPage || DEFAULT_SETTINGS.postsPerPage),
         enableComments: values.enableComments ? "true" : "false",
         enableRss: values.enableRss ? "true" : "false",
         enableSitemap: values.enableSitemap ? "true" : "false",
@@ -81,17 +134,20 @@ export default function SettingsPage() {
       const res = await fetch("/api/admin/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(payload),
       });
+      const data = (await res.json()) as {
+        success: boolean;
+        error?: string;
+      };
 
-      const data = await res.json();
       if (data.success) {
-        message.success("保存成功");
+        message.success("Settings saved");
       } else {
-        message.error(data.error || "保存失败");
+        message.error(data.error || "Failed to save settings");
       }
-    } catch (error) {
-      message.error("保存失败");
+    } catch {
+      message.error("Failed to save settings");
     } finally {
       setSaving(false);
     }
@@ -108,9 +164,11 @@ export default function SettingsPage() {
         }}
       >
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>网站设置</h2>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>
+            Site Settings
+          </h2>
           <p style={{ margin: "4px 0 0", color: "#999" }}>
-            配置网站的基本信息和功能选项
+            Configure site content, profile information, and publishing options.
           </p>
         </div>
         <Button
@@ -119,7 +177,7 @@ export default function SettingsPage() {
           loading={saving}
           onClick={() => form.submit()}
         >
-          保存设置
+          Save Settings
         </Button>
       </div>
 
@@ -128,65 +186,131 @@ export default function SettingsPage() {
           activeKey={activeTab}
           onChange={setActiveTab}
           items={[
-            { key: "basic", label: "基本设置" },
-            { key: "profile", label: "个人简介" },
-            { key: "seo", label: "SEO 设置" },
-            { key: "display", label: "显示设置" },
-            { key: "social", label: "社交媒体" },
+            { key: "basic", label: "Basic" },
+            { key: "profile", label: "Profile" },
+            { key: "seo", label: "SEO" },
+            { key: "display", label: "Display" },
+            { key: "social", label: "Social" },
           ]}
         />
 
-        {/* 基本设置 */}
         <Card style={{ display: activeTab === "basic" ? "block" : "none" }}>
           <Form.Item
-            label="网站名称"
+            label="Site Name"
             name="siteName"
-            rules={[{ required: true, message: "请输入网站名称" }]}
+            rules={[
+              createRequiredTrimmedRule("Site name", SETTINGS_LIMITS.siteName),
+            ]}
           >
-            <Input placeholder="请输入网站名称" />
-          </Form.Item>
-          <Form.Item
-            label="网站描述"
-            name="siteDescription"
-            rules={[{ required: true, message: "请输入网站描述" }]}
-          >
-            <TextArea
-              rows={3}
-              placeholder="请输入网站描述"
+            <Input
+              placeholder="My Blog"
+              maxLength={SETTINGS_LIMITS.siteName}
               showCount
-              maxLength={200}
             />
           </Form.Item>
           <Form.Item
-            label="网站关键词"
-            name="siteKeywords"
-            help="多个关键词用逗号分隔"
+            label="Site Description"
+            name="siteDescription"
+            rules={[
+              createRequiredTrimmedRule(
+                "Site description",
+                SETTINGS_LIMITS.siteDescription,
+              ),
+            ]}
           >
-            <Input placeholder="博客,技术,分享" />
+            <TextArea
+              rows={3}
+              placeholder="A concise summary of your blog."
+              showCount
+              maxLength={SETTINGS_LIMITS.siteDescription}
+            />
           </Form.Item>
-          <Form.Item label="网站地址" name="siteUrl">
-            <Input placeholder="https://example.com" />
+          <Form.Item
+            label="Keywords"
+            name="siteKeywords"
+            help="Separate multiple keywords with commas."
+            rules={[createKeywordsRule(SETTINGS_LIMITS.siteKeywords)]}
+          >
+            <Input
+              placeholder="blog, tech, notes"
+              maxLength={SETTINGS_LIMITS.siteKeywords}
+              showCount
+            />
           </Form.Item>
-          <Form.Item label="网站作者" name="siteAuthor">
-            <Input placeholder="请输入作者名称" />
+          <Form.Item
+            label="Site URL"
+            name="siteUrl"
+            rules={[
+              createOptionalHttpUrlRule("Site URL", SETTINGS_LIMITS.siteUrl),
+            ]}
+          >
+            <Input
+              placeholder="https://example.com"
+              maxLength={SETTINGS_LIMITS.siteUrl}
+            />
           </Form.Item>
-          <Form.Item label="联系邮箱" name="siteEmail">
-            <Input type="email" placeholder="admin@example.com" />
+          <Form.Item
+            label="Author"
+            name="siteAuthor"
+            rules={[
+              createOptionalTrimmedRule("Author", SETTINGS_LIMITS.siteAuthor),
+            ]}
+          >
+            <Input
+              placeholder="Your name"
+              maxLength={SETTINGS_LIMITS.siteAuthor}
+              showCount
+            />
           </Form.Item>
-          <Form.Item label="ICP 备案号" name="siteIcp">
-            <Input placeholder="请输入 ICP 备案号" />
+          <Form.Item
+            label="Contact Email"
+            name="siteEmail"
+            rules={[
+              createOptionalEmailRule(
+                "Contact email",
+                SETTINGS_LIMITS.siteEmail,
+              ),
+            ]}
+          >
+            <Input
+              type="email"
+              placeholder="admin@example.com"
+              maxLength={SETTINGS_LIMITS.siteEmail}
+            />
+          </Form.Item>
+          <Form.Item
+            label="ICP Record"
+            name="siteIcp"
+            rules={[
+              createOptionalTrimmedRule(
+                "ICP record",
+                SETTINGS_LIMITS.siteIcp,
+              ),
+            ]}
+          >
+            <Input
+              placeholder="Optional for CN deployment"
+              maxLength={SETTINGS_LIMITS.siteIcp}
+              showCount
+            />
           </Form.Item>
         </Card>
 
-        {/* 个人简介 */}
         <Card style={{ display: activeTab === "profile" ? "block" : "none" }}>
           <Form.Item
-            label="侧边栏背景图"
+            label="Profile Banner"
             name="siteProfileBanner"
-            help="个人简介卡片顶部背景图，建议尺寸 400×120 左右"
+            help="Shown at the top of the profile card."
+            rules={[
+              createOptionalImageSourceRule(
+                "Profile banner",
+                SETTINGS_LIMITS.siteProfileBanner,
+              ),
+            ]}
           >
             <Input
-              placeholder="点击选择或输入图片地址"
+              placeholder="Select or paste an image URL"
+              maxLength={SETTINGS_LIMITS.siteProfileBanner}
               addonAfter={
                 <Button
                   type="link"
@@ -194,48 +318,71 @@ export default function SettingsPage() {
                   icon={<PictureOutlined />}
                   onClick={() => setBannerPickerOpen(true)}
                 >
-                  选择
+                  Choose
                 </Button>
               }
             />
           </Form.Item>
           <Form.Item
             noStyle
-            shouldUpdate={(prev, curr) => prev.siteProfileBanner !== curr.siteProfileBanner}
+            shouldUpdate={(prev, next) =>
+              prev.siteProfileBanner !== next.siteProfileBanner
+            }
           >
             {({ getFieldValue }) => {
-              const banner = getFieldValue("siteProfileBanner");
-              if (!banner) return null;
+              const banner = getFieldValue("siteProfileBanner") as string | undefined;
+              if (!banner) {
+                return null;
+              }
+
               return (
                 <div style={{ marginBottom: 16 }}>
                   <Image
                     src={banner}
-                    alt="背景预览"
-                    style={{ maxWidth: 300, maxHeight: 90, objectFit: "cover", borderRadius: 8 }}
+                    alt="Banner preview"
+                    style={{
+                      maxWidth: 300,
+                      maxHeight: 90,
+                      objectFit: "cover",
+                      borderRadius: 8,
+                    }}
                   />
                 </div>
               );
             }}
           </Form.Item>
           <Form.Item
-            label="个人格言"
+            label="Profile Motto"
             name="siteMotto"
-            help="显示在侧边栏个人简介卡片中"
+            help="Appears in the sidebar profile card."
+            rules={[
+              createOptionalTrimmedRule(
+                "Profile motto",
+                SETTINGS_LIMITS.siteMotto,
+              ),
+            ]}
           >
             <TextArea
               rows={2}
-              placeholder="记录与分享，让技术更有温度"
-              maxLength={100}
+              placeholder="Write a short one-line intro."
+              maxLength={SETTINGS_LIMITS.siteMotto}
               showCount
             />
           </Form.Item>
           <Form.Item
-            label="个人头像"
+            label="Avatar"
             name="siteAvatar"
-            help="个人简介卡片头像，建议正方形图片"
+            help="Square image recommended."
+            rules={[
+              createOptionalImageSourceRule(
+                "Avatar",
+                SETTINGS_LIMITS.siteAvatar,
+              ),
+            ]}
           >
             <Input
-              placeholder="点击选择或输入图片地址"
+              placeholder="Select or paste an image URL"
+              maxLength={SETTINGS_LIMITS.siteAvatar}
               addonAfter={
                 <Button
                   type="link"
@@ -243,23 +390,26 @@ export default function SettingsPage() {
                   icon={<PictureOutlined />}
                   onClick={() => setAvatarPickerOpen(true)}
                 >
-                  选择
+                  Choose
                 </Button>
               }
             />
           </Form.Item>
           <Form.Item
             noStyle
-            shouldUpdate={(prev, curr) => prev.siteAvatar !== curr.siteAvatar}
+            shouldUpdate={(prev, next) => prev.siteAvatar !== next.siteAvatar}
           >
             {({ getFieldValue }) => {
-              const avatar = getFieldValue("siteAvatar");
-              if (!avatar) return null;
+              const avatar = getFieldValue("siteAvatar") as string | undefined;
+              if (!avatar) {
+                return null;
+              }
+
               return (
                 <div style={{ marginBottom: 16 }}>
                   <Image
                     src={avatar}
-                    alt="头像预览"
+                    alt="Avatar preview"
                     width={80}
                     height={80}
                     style={{ borderRadius: "50%", objectFit: "cover" }}
@@ -268,85 +418,149 @@ export default function SettingsPage() {
               );
             }}
           </Form.Item>
-          <ImagePicker
-            open={bannerPickerOpen}
-            onClose={() => setBannerPickerOpen(false)}
-            onSelect={(filepath) => {
-              form.setFieldValue("siteProfileBanner", filepath);
-              setBannerPickerOpen(false);
-            }}
-            value={form.getFieldValue("siteProfileBanner")}
-          />
-          <ImagePicker
-            open={avatarPickerOpen}
-            onClose={() => setAvatarPickerOpen(false)}
-            onSelect={(filepath) => {
-              form.setFieldValue("siteAvatar", filepath);
-              setAvatarPickerOpen(false);
-            }}
-            value={form.getFieldValue("siteAvatar")}
-          />
         </Card>
 
-        {/* SEO 设置 */}
         <Card style={{ display: activeTab === "seo" ? "block" : "none" }}>
           <Form.Item
-            label="统计代码"
+            label="Analytics Code"
             name="siteAnalytics"
-            help="Google Analytics 或百度统计代码"
+            help="Paste your analytics script or code snippet."
+            rules={[
+              createOptionalTrimmedRule(
+                "Analytics code",
+                SETTINGS_LIMITS.siteAnalytics,
+              ),
+            ]}
           >
             <TextArea
               rows={6}
-              placeholder="请粘贴统计代码"
+              placeholder="Analytics snippet"
               style={{ fontFamily: "monospace" }}
+              maxLength={SETTINGS_LIMITS.siteAnalytics}
             />
           </Form.Item>
           <Form.Item
-            label="生成 Sitemap"
+            label="Generate Sitemap"
             name="enableSitemap"
             valuePropName="checked"
           >
-            <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+            <Switch checkedChildren="On" unCheckedChildren="Off" />
           </Form.Item>
-          <Form.Item label="生成 RSS" name="enableRss" valuePropName="checked">
-            <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+          <Form.Item label="Generate RSS" name="enableRss" valuePropName="checked">
+            <Switch checkedChildren="On" unCheckedChildren="Off" />
           </Form.Item>
         </Card>
 
-        {/* 显示设置 */}
         <Card style={{ display: activeTab === "display" ? "block" : "none" }}>
           <Form.Item
-            label="每页文章数"
+            label="Posts Per Page"
             name="postsPerPage"
-            rules={[{ required: true, message: "请输入每页文章数" }]}
+            rules={[
+              createIntegerRangeRule(
+                "Posts per page",
+                POSTS_PER_PAGE_RANGE.min,
+                POSTS_PER_PAGE_RANGE.max,
+              ),
+            ]}
           >
-            <InputNumber min={1} max={50} style={{ width: "100%" }} />
+            <InputNumber
+              min={POSTS_PER_PAGE_RANGE.min}
+              max={POSTS_PER_PAGE_RANGE.max}
+              style={{ width: "100%" }}
+            />
           </Form.Item>
           <Form.Item
-            label="启用评论"
+            label="Enable Comments"
             name="enableComments"
             valuePropName="checked"
           >
-            <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+            <Switch checkedChildren="On" unCheckedChildren="Off" />
           </Form.Item>
         </Card>
 
-        {/* 社交媒体 */}
         <Card style={{ display: activeTab === "social" ? "block" : "none" }}>
-          <Form.Item label="GitHub" name="socialGithub">
-            <Input placeholder="https://github.com/username" prefix="🐙" />
+          <Form.Item
+            label="GitHub"
+            name="socialGithub"
+            rules={[
+              createOptionalHttpUrlRule(
+                "GitHub URL",
+                SETTINGS_LIMITS.socialGithub,
+              ),
+            ]}
+          >
+            <Input
+              placeholder="https://github.com/username"
+              maxLength={SETTINGS_LIMITS.socialGithub}
+            />
           </Form.Item>
-          <Form.Item label="Twitter" name="socialTwitter">
-            <Input placeholder="https://twitter.com/username" prefix="🐦" />
+          <Form.Item
+            label="Twitter / X"
+            name="socialTwitter"
+            rules={[
+              createOptionalHttpUrlRule(
+                "Twitter URL",
+                SETTINGS_LIMITS.socialTwitter,
+              ),
+            ]}
+          >
+            <Input
+              placeholder="https://x.com/username"
+              maxLength={SETTINGS_LIMITS.socialTwitter}
+            />
           </Form.Item>
-          <Form.Item label="微博" name="socialWeibo">
-            <Input placeholder="https://weibo.com/username" prefix="📱" />
+          <Form.Item
+            label="Weibo"
+            name="socialWeibo"
+            rules={[
+              createOptionalHttpUrlRule(
+                "Weibo URL",
+                SETTINGS_LIMITS.socialWeibo,
+              ),
+            ]}
+          >
+            <Input
+              placeholder="https://weibo.com/username"
+              maxLength={SETTINGS_LIMITS.socialWeibo}
+            />
           </Form.Item>
-          <Form.Item label="邮箱" name="socialEmail">
-            <Input placeholder="contact@example.com" prefix="📧" />
+          <Form.Item
+            label="Public Email"
+            name="socialEmail"
+            rules={[
+              createOptionalEmailRule(
+                "Public email",
+                SETTINGS_LIMITS.socialEmail,
+              ),
+            ]}
+          >
+            <Input
+              placeholder="contact@example.com"
+              maxLength={SETTINGS_LIMITS.socialEmail}
+            />
           </Form.Item>
         </Card>
       </Form>
+
+      <ImagePicker
+        open={bannerPickerOpen}
+        onClose={() => setBannerPickerOpen(false)}
+        onSelect={(filepath) => {
+          form.setFieldValue("siteProfileBanner", filepath);
+          setBannerPickerOpen(false);
+        }}
+        value={form.getFieldValue("siteProfileBanner")}
+      />
+
+      <ImagePicker
+        open={avatarPickerOpen}
+        onClose={() => setAvatarPickerOpen(false)}
+        onSelect={(filepath) => {
+          form.setFieldValue("siteAvatar", filepath);
+          setAvatarPickerOpen(false);
+        }}
+        value={form.getFieldValue("siteAvatar")}
+      />
     </Spin>
   );
 }

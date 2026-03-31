@@ -1,36 +1,63 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Row, Col, Spin, Card, Table, Tag, Button, Space } from "antd";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { Button, Card, Col, Row, Space, Spin, Table, Tag } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
-  FileTextOutlined,
   CheckCircleOutlined,
+  FileTextOutlined,
   FolderOutlined,
-  TagOutlined,
-  PlusOutlined,
   PictureOutlined,
+  PlusOutlined,
+  TagOutlined,
 } from "@ant-design/icons";
 import { MetricCard } from "@/components/common";
-import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+
+interface DashboardStats {
+  postCount: number;
+  categoryCount: number;
+  tagCount: number;
+  publishedCount: number;
+  draftCount: number;
+}
+
+interface DashboardPost {
+  id: string;
+  title: string;
+  published: boolean;
+  viewCount: number;
+  createdAt: string;
+  category?: {
+    name: string;
+  } | null;
+}
+
+interface TaxonomyItem {
+  id: string;
+  name: string;
+}
+
+interface ApiListResponse<T> {
+  success: boolean;
+  data: T[];
+  error?: string;
+}
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     postCount: 0,
     categoryCount: 0,
     tagCount: 0,
     publishedCount: 0,
     draftCount: 0,
   });
-  const [recentPosts, setRecentPosts] = useState<any[]>([]);
+  const [recentPosts, setRecentPosts] = useState<DashboardPost[]>([]);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
+
     try {
       const [postsRes, categoriesRes, tagsRes] = await Promise.all([
         fetch("/api/admin/posts"),
@@ -38,76 +65,94 @@ export default function DashboardPage() {
         fetch("/api/admin/tags"),
       ]);
 
-      const postsData = await postsRes.json();
-      const categoriesData = await categoriesRes.json();
-      const tagsData = await tagsRes.json();
+      const [postsData, categoriesData, tagsData] = (await Promise.all([
+        postsRes.json(),
+        categoriesRes.json(),
+        tagsRes.json(),
+      ])) as [
+        ApiListResponse<DashboardPost>,
+        ApiListResponse<TaxonomyItem>,
+        ApiListResponse<TaxonomyItem>,
+      ];
 
-      if (postsData.success) {
-        const posts = postsData.data;
-        setRecentPosts(posts.slice(0, 5));
-        setStats({
-          postCount: posts.length,
-          categoryCount: categoriesData.success
-            ? categoriesData.data.length
-            : 0,
+      if (!postsData.success) {
+        setRecentPosts([]);
+        setStats((current) => ({
+          ...current,
+          categoryCount: categoriesData.success ? categoriesData.data.length : 0,
           tagCount: tagsData.success ? tagsData.data.length : 0,
-          publishedCount: posts.filter((p: any) => p.published).length,
-          draftCount: posts.filter((p: any) => !p.published).length,
-        });
+        }));
+        return;
       }
+
+      const posts = postsData.data;
+
+      setRecentPosts(posts.slice(0, 5));
+      setStats({
+        postCount: posts.length,
+        categoryCount: categoriesData.success ? categoriesData.data.length : 0,
+        tagCount: tagsData.success ? tagsData.data.length : 0,
+        publishedCount: posts.filter((post) => post.published).length,
+        draftCount: posts.filter((post) => !post.published).length,
+      });
     } catch (error) {
-      console.error("Failed to load data:", error);
+      console.error("Failed to load dashboard data:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const columns = [
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  const columns: ColumnsType<DashboardPost> = [
     {
-      title: "标题",
+      title: "Title",
       dataIndex: "title",
       key: "title",
-      render: (text: string, record: any) => (
-        <Link
-          href={`/admin/posts/${record.id}/edit`}
-          style={{ color: "#1890ff" }}
-        >
+      render: (text, record) => (
+        <Link href={`/admin/posts/${record.id}/edit`} style={{ color: "#1890ff" }}>
           {text}
         </Link>
       ),
     },
     {
-      title: "分类",
+      title: "Category",
       dataIndex: ["category", "name"],
       key: "category",
-      width: 120,
-      render: (text: string) =>
-        text || <span style={{ color: "#999" }}>-</span>,
+      width: 140,
+      render: (text?: string) =>
+        text || <span style={{ color: "#999" }}>Uncategorized</span>,
     },
     {
-      title: "状态",
+      title: "Status",
       dataIndex: "published",
       key: "published",
-      width: 70,
+      width: 110,
       render: (published: boolean) => (
         <Tag color={published ? "success" : "warning"} style={{ margin: 0 }}>
-          {published ? "已发布" : "草稿"}
+          {published ? "Published" : "Draft"}
         </Tag>
       ),
     },
     {
-      title: "浏览",
+      title: "Views",
       dataIndex: "viewCount",
       key: "viewCount",
-      width: 120,
-      render: (count: number) => count,
+      width: 100,
     },
     {
-      title: "时间",
+      title: "Created",
       dataIndex: "createdAt",
       key: "createdAt",
-      width: 120,
-      render: (date: Date) => new Date(date).toLocaleDateString("zh-CN"),
+      width: 140,
+      render: (date: string) =>
+        new Date(date).toLocaleDateString("zh-CN", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }),
     },
   ];
 
@@ -121,11 +166,10 @@ export default function DashboardPage() {
 
   return (
     <div>
-      {/* 统计卡片 + 快速操作 */}
       <Row gutter={12}>
         <Col xs={12} lg={5}>
           <MetricCard
-            title="文章"
+            title="Posts"
             value={stats.postCount}
             icon={<FileTextOutlined />}
             color="#1890ff"
@@ -133,7 +177,7 @@ export default function DashboardPage() {
         </Col>
         <Col xs={12} lg={5}>
           <MetricCard
-            title="已发布"
+            title="Published"
             value={stats.publishedCount}
             icon={<CheckCircleOutlined />}
             color="#52c41a"
@@ -141,7 +185,7 @@ export default function DashboardPage() {
         </Col>
         <Col xs={12} lg={5}>
           <MetricCard
-            title="分类"
+            title="Categories"
             value={stats.categoryCount}
             icon={<FolderOutlined />}
             color="#1890ff"
@@ -149,7 +193,7 @@ export default function DashboardPage() {
         </Col>
         <Col xs={12} lg={5}>
           <MetricCard
-            title="标签"
+            title="Tags"
             value={stats.tagCount}
             icon={<TagOutlined />}
             color="#faad14"
@@ -157,30 +201,25 @@ export default function DashboardPage() {
         </Col>
         <Col xs={24} lg={4}>
           <Card size="small" styles={{ body: { padding: 12 } }}>
-            <Space orientation="vertical" style={{ width: "100%" }} size={6}>
+            <Space direction="vertical" style={{ width: "100%" }} size={6}>
               <Link href="/admin/posts/new">
-                <Button
-                  type="primary"
-                  block
-                  size="small"
-                  icon={<PlusOutlined />}
-                >
-                  写新文章
+                <Button type="primary" block size="small" icon={<PlusOutlined />}>
+                  New Post
                 </Button>
               </Link>
               <Link href="/admin/media">
                 <Button block size="small" icon={<PictureOutlined />}>
-                  媒体库
+                  Media Library
                 </Button>
               </Link>
               <Link href="/admin/categories">
                 <Button block size="small" icon={<FolderOutlined />}>
-                  分类管理
+                  Categories
                 </Button>
               </Link>
               <Link href="/admin/tags">
                 <Button block size="small" icon={<TagOutlined />}>
-                  标签管理
+                  Tags
                 </Button>
               </Link>
             </Space>
@@ -188,15 +227,14 @@ export default function DashboardPage() {
         </Col>
       </Row>
 
-      {/* 最近文章 */}
       <Card
-        title="最近文章"
+        title="Recent Posts"
         size="small"
         style={{ marginTop: 12 }}
         extra={
           <Link href="/admin/posts">
             <Button type="link" size="small">
-              查看全部
+              View all
             </Button>
           </Link>
         }
@@ -207,10 +245,10 @@ export default function DashboardPage() {
             <FileTextOutlined
               style={{ fontSize: 36, color: "#d9d9d9", marginBottom: 12 }}
             />
-            <p style={{ color: "#999", marginBottom: 12 }}>还没有文章</p>
+            <p style={{ color: "#999", marginBottom: 12 }}>No posts yet.</p>
             <Link href="/admin/posts/new">
               <Button type="primary" size="small">
-                写新文章
+                Create your first post
               </Button>
             </Link>
           </div>

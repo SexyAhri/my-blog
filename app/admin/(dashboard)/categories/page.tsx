@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Row, Col, Tag, Button, Space, App } from "antd";
+import { useCallback, useEffect, useState } from "react";
+import { App, Button, Col, Row, Space, Tag } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   FolderOutlined,
   PlusOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
 import {
-  MetricCard,
   DataTable,
   FormDrawer,
   InputItem,
+  MetricCard,
   TextAreaItem,
 } from "@/components/common";
 import { generateSlug } from "@/lib/utils";
@@ -24,6 +25,18 @@ interface Category {
   _count?: { posts: number };
 }
 
+interface CategoryFormValues {
+  name: string;
+  slug: string;
+  description?: string;
+}
+
+interface CategoriesResponse {
+  success: boolean;
+  data: Category[];
+  error?: string;
+}
+
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,24 +45,25 @@ export default function CategoriesPage() {
   const [submitting, setSubmitting] = useState(false);
   const { message, modal } = App.useApp();
 
-  useEffect(() => {
-    loadCategories();
-  }, []);
-
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     setLoading(true);
+
     try {
       const res = await fetch("/api/admin/categories");
-      const data = await res.json();
+      const data = (await res.json()) as CategoriesResponse;
       if (data.success) {
         setCategories(data.data);
       }
-    } catch (error) {
-      message.error("加载失败");
+    } catch {
+      message.error("Failed to load categories");
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
+
+  useEffect(() => {
+    void loadCategories();
+  }, [loadCategories]);
 
   const handleEdit = (record: Category) => {
     setEditingCategory(record);
@@ -58,32 +72,37 @@ export default function CategoriesPage() {
 
   const handleDelete = (id: string) => {
     modal.confirm({
-      title: "确认删除",
-      content: "确定要删除这个分类吗？",
-      okText: "确定",
-      cancelText: "取消",
+      title: "Delete category",
+      content: "This action cannot be undone. Continue?",
+      okText: "Delete",
+      cancelText: "Cancel",
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           const res = await fetch(`/api/admin/categories/${id}`, {
             method: "DELETE",
           });
-          const data = await res.json();
+          const data = (await res.json()) as {
+            success: boolean;
+            error?: string;
+          };
+
           if (data.success) {
-            message.success("删除成功");
-            loadCategories();
+            message.success("Category deleted");
+            await loadCategories();
           } else {
-            message.error(data.error || "删除失败");
+            message.error(data.error || "Failed to delete category");
           }
-        } catch (error) {
-          message.error("删除失败");
+        } catch {
+          message.error("Failed to delete category");
         }
       },
     });
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: CategoryFormValues) => {
     setSubmitting(true);
+
     try {
       const url = editingCategory
         ? `/api/admin/categories/${editingCategory.id}`
@@ -96,67 +115,65 @@ export default function CategoriesPage() {
         body: JSON.stringify(values),
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as { success: boolean; error?: string };
+
       if (data.success) {
-        message.success(editingCategory ? "更新成功" : "创建成功");
+        message.success(editingCategory ? "Category updated" : "Category created");
         setDrawerOpen(false);
         setEditingCategory(null);
-        loadCategories();
+        await loadCategories();
       } else {
-        message.error(data.error || "操作失败");
+        message.error(data.error || "Operation failed");
       }
-    } catch (error) {
-      message.error("操作失败");
+    } catch {
+      message.error("Operation failed");
     } finally {
       setSubmitting(false);
     }
   };
 
   const totalPosts = categories.reduce(
-    (sum, cat) => sum + (cat._count?.posts || 0),
+    (sum, category) => sum + (category._count?.posts || 0),
     0,
   );
 
-  const columns = [
+  const columns: ColumnsType<Category> = [
     {
-      title: "名称",
+      title: "Name",
       dataIndex: "name",
       key: "name",
       width: "25%",
     },
     {
-      title: "URL 别名",
+      title: "Slug",
       dataIndex: "slug",
       key: "slug",
       width: "20%",
-      render: (text: string) => (
-        <code style={{ color: "#1890ff" }}>{text}</code>
-      ),
+      render: (text: string) => <code style={{ color: "#1890ff" }}>{text}</code>,
     },
     {
-      title: "描述",
+      title: "Description",
       dataIndex: "description",
       key: "description",
       width: "35%",
-      render: (text: string) =>
-        text || <span style={{ color: "#999" }}>-</span>,
+      render: (text?: string) => text || <span style={{ color: "#999" }}>-</span>,
     },
     {
-      title: "文章数",
+      title: "Posts",
       key: "posts",
       width: "10%",
-      render: (_: any, record: Category) => (
-        <Tag color="blue">{record._count?.posts || 0} 篇</Tag>
+      render: (_value: unknown, record: Category) => (
+        <Tag color="blue">{record._count?.posts || 0}</Tag>
       ),
     },
     {
-      title: "操作",
+      title: "Actions",
       key: "action",
       width: "10%",
-      render: (_: any, record: Category) => (
+      render: (_value: unknown, record: Category) => (
         <Space size="small">
           <Button type="link" size="small" onClick={() => handleEdit(record)}>
-            编辑
+            Edit
           </Button>
           <Button
             type="link"
@@ -164,7 +181,7 @@ export default function CategoriesPage() {
             danger
             onClick={() => handleDelete(record.id)}
           >
-            删除
+            Delete
           </Button>
         </Space>
       ),
@@ -176,7 +193,7 @@ export default function CategoriesPage() {
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12}>
           <MetricCard
-            title="分类总数"
+            title="Categories"
             value={categories.length}
             icon={<FolderOutlined />}
             color="#1890ff"
@@ -184,7 +201,7 @@ export default function CategoriesPage() {
         </Col>
         <Col xs={24} sm={12}>
           <MetricCard
-            title="文章总数"
+            title="Posts in Categories"
             value={totalPosts}
             icon={<FolderOutlined />}
             color="#52c41a"
@@ -192,12 +209,12 @@ export default function CategoriesPage() {
         </Col>
       </Row>
 
-      <DataTable
-        cardTitle="分类列表"
+      <DataTable<Category>
+        cardTitle="Category List"
         cardExtra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={loadCategories}>
-              刷新
+            <Button icon={<ReloadOutlined />} onClick={() => void loadCategories()}>
+              Refresh
             </Button>
             <Button
               type="primary"
@@ -207,7 +224,7 @@ export default function CategoriesPage() {
                 setDrawerOpen(true);
               }}
             >
-              添加分类
+              Add Category
             </Button>
           </Space>
         }
@@ -218,8 +235,8 @@ export default function CategoriesPage() {
         style={{ marginTop: 16 }}
       />
 
-      <FormDrawer
-        title={editingCategory ? "编辑分类" : "添加分类"}
+      <FormDrawer<CategoryFormValues>
+        title={editingCategory ? "Edit Category" : "Add Category"}
         open={drawerOpen}
         onClose={() => {
           setDrawerOpen(false);
@@ -227,26 +244,25 @@ export default function CategoriesPage() {
         }}
         onSubmit={handleSubmit}
         onValuesChange={(changedValues, allValues, form) => {
-          if (changedValues.name && !editingCategory) {
+          void allValues;
+          if (typeof changedValues.name === "string" && !editingCategory) {
             form.setFieldValue("slug", generateSlug(changedValues.name));
           }
         }}
-        initialValues={editingCategory || {}}
+        initialValues={
+          editingCategory
+            ? {
+                name: editingCategory.name,
+                slug: editingCategory.slug,
+                description: editingCategory.description,
+              }
+            : {}
+        }
         loading={submitting}
       >
-        <InputItem
-          name="name"
-          label="分类名称"
-          required
-          placeholder="请输入分类名称"
-        />
-        <InputItem
-          name="slug"
-          label="URL 别名"
-          required
-          placeholder="请输入 URL 别名"
-        />
-        <TextAreaItem name="description" label="描述" rows={3} span={3} />
+        <InputItem name="name" label="Category Name" required />
+        <InputItem name="slug" label="Slug" required />
+        <TextAreaItem name="description" label="Description" rows={3} span={3} />
       </FormDrawer>
     </div>
   );

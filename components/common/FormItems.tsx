@@ -1,25 +1,48 @@
 "use client";
 
+import type { CSSProperties, ReactNode } from "react";
 import {
+  Col,
   Form,
   Input,
-  Select,
   InputNumber,
-  TreeSelect,
   Radio,
+  Row,
+  Select,
   Switch,
-  Col,
+  TreeSelect,
+  theme,
 } from "antd";
 import type { Rule } from "antd/es/form";
-import type { CSSProperties } from "react";
 
 const { TextArea } = Input;
 
-// 下划线样式
 const underlineStyle: CSSProperties = {
   borderBottom: "1px solid #d9d9d9",
   borderRadius: 0,
 };
+
+type SelectValue = string | number;
+type RadioValue = string | number | boolean;
+
+interface SelectOption {
+  value: SelectValue;
+  label: string;
+}
+
+interface RadioOption {
+  value: RadioValue;
+  label: string;
+}
+
+interface TreeOption {
+  title: ReactNode;
+  value: string;
+  key?: string;
+  disabled?: boolean;
+  selectable?: boolean;
+  children?: TreeOption[];
+}
 
 interface BaseFormItemProps {
   name: string;
@@ -27,22 +50,19 @@ interface BaseFormItemProps {
   required?: boolean;
   rules?: Rule[];
   placeholder?: string;
-  span?: number; // 占几列，默认1列（共3列，span=1占8格，span=2占16格，span=3占24格）
+  span?: number;
 }
 
-// 包装组件，处理列布局
 function FormCol({
   span = 1,
   children,
 }: {
   span?: number;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
-  const colSpan = span * 8; // 1列=8, 2列=16, 3列=24
-  return <Col span={colSpan}>{children}</Col>;
+  return <Col span={span * 8}>{children}</Col>;
 }
 
-// 文本输入
 export function InputItem({
   name,
   label,
@@ -61,14 +81,13 @@ export function InputItem({
         <Input
           variant="borderless"
           style={underlineStyle}
-          placeholder={placeholder || `请输入${label}`}
+          placeholder={placeholder || `Please enter ${label}`}
         />
       </Form.Item>
     </FormCol>
   );
 }
 
-// 多行文本（保留完整边框）
 export function TextAreaItem({
   name,
   label,
@@ -86,13 +105,12 @@ export function TextAreaItem({
         labelCol={span === 3 ? { span: 2 } : undefined}
         wrapperCol={span === 3 ? { span: 22 } : undefined}
       >
-        <TextArea rows={rows} placeholder={`请输入${label}`} />
+        <TextArea rows={rows} placeholder={`Please enter ${label}`} />
       </Form.Item>
     </FormCol>
   );
 }
 
-// 数字输入
 export function NumberItem({
   name,
   label,
@@ -117,9 +135,8 @@ export function NumberItem({
   );
 }
 
-// 下拉选择
 interface SelectItemProps extends BaseFormItemProps {
-  options: { value: any; label: string }[];
+  options: SelectOption[];
   mode?: "multiple" | "tags";
 }
 
@@ -144,7 +161,7 @@ export function SelectItem({
           style={underlineStyle}
           mode={mode}
           options={options}
-          placeholder={placeholder || `请选择${label}`}
+          placeholder={placeholder || `Please select ${label}`}
           allowClear
         />
       </Form.Item>
@@ -152,10 +169,9 @@ export function SelectItem({
   );
 }
 
-// 状态选择
 export function StatusSelect({
   name = "status",
-  label = "状态",
+  label = "Status",
   span = 1,
 }: {
   name?: string;
@@ -169,8 +185,8 @@ export function StatusSelect({
           variant="borderless"
           style={underlineStyle}
           options={[
-            { value: "active", label: "正常" },
-            { value: "disabled", label: "停用" },
+            { value: "active", label: "Active" },
+            { value: "disabled", label: "Disabled" },
           ]}
         />
       </Form.Item>
@@ -178,9 +194,8 @@ export function StatusSelect({
   );
 }
 
-// 树形选择
 interface TreeSelectItemProps extends BaseFormItemProps {
-  treeData: any[];
+  treeData: TreeOption[];
 }
 
 export function TreeSelectItem({
@@ -203,17 +218,16 @@ export function TreeSelectItem({
           style={underlineStyle}
           treeData={treeData}
           allowClear
-          placeholder={placeholder || `请选择${label}`}
+          placeholder={placeholder || `Please select ${label}`}
         />
       </Form.Item>
     </FormCol>
   );
 }
 
-// 单选组
 interface RadioGroupItemProps extends BaseFormItemProps {
-  options: { value: any; label: string }[];
-  onChange?: (value: any) => void;
+  options: RadioOption[];
+  onChange?: (value: RadioValue) => void;
 }
 
 export function RadioGroupItem({
@@ -232,11 +246,11 @@ export function RadioGroupItem({
         rules={required ? [{ required: true }] : undefined}
       >
         <Radio.Group
-          onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+          onChange={onChange ? (event) => onChange(event.target.value) : undefined}
         >
-          {options.map((opt) => (
-            <Radio key={opt.value} value={opt.value}>
-              {opt.label}
+          {options.map((option) => (
+            <Radio key={String(option.value)} value={option.value}>
+              {option.label}
             </Radio>
           ))}
         </Radio.Group>
@@ -245,7 +259,6 @@ export function RadioGroupItem({
   );
 }
 
-// 开关
 export function SwitchItem({
   name,
   label,
@@ -264,24 +277,17 @@ export function SwitchItem({
   );
 }
 
-// 备注
 export function RemarkItem({ span = 3 }: { span?: number }) {
-  return <TextAreaItem name="remark" label="备注" rows={2} span={span} />;
+  return <TextAreaItem name="remark" label="Remark" rows={2} span={span} />;
 }
 
-// 排序
 export function SortItem({ span = 1 }: { span?: number }) {
-  return (
-    <NumberItem name="sort" label="显示排序" required min={0} span={span} />
-  );
+  return <NumberItem name="sort" label="Sort Order" required min={0} span={span} />;
 }
-
-// 表单分组（简洁分隔线样式）
-import { Row, theme } from "antd";
 
 interface FormGroupProps {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function FormGroup({ title, children }: FormGroupProps) {
@@ -289,7 +295,6 @@ export function FormGroup({ title, children }: FormGroupProps) {
 
   return (
     <Col span={24} style={{ marginBottom: 8 }}>
-      {/* 分组标题 */}
       <div
         style={{
           display: "flex",
@@ -324,7 +329,6 @@ export function FormGroup({ title, children }: FormGroupProps) {
           }}
         />
       </div>
-      {/* 表单内容 */}
       <Row gutter={16}>{children}</Row>
     </Col>
   );

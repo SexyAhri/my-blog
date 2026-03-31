@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateSlug } from "@/lib/utils";
 import { getClientInfo, logOperation } from "@/lib/logger";
 import { invalidatePostCaches, invalidateTaxonomyCaches } from "@/lib/cache";
 import { requireAdmin } from "@/lib/admin";
 import { sanitizeRichContent } from "@/lib/content";
+import { parsePostMutationInput } from "@/lib/post-payload";
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,32 +66,18 @@ export async function POST(request: NextRequest) {
     }
 
     const session = admin.session!;
-    const body = await request.json();
-    const {
-      title,
-      slug,
-      content,
-      excerpt,
-      coverImage,
-      published,
-      categoryId,
-      tags,
-      tagIds,
-      seriesId,
-      seriesOrder,
-      scheduledAt,
-    } = body;
+    const parsedInput = parsePostMutationInput(await request.json());
 
-    if (!title || !content) {
+    if (!parsedInput.success) {
       return NextResponse.json(
-        { success: false, error: "Title and content are required" },
-        { status: 400 },
+        { success: false, error: parsedInput.error },
+        { status: parsedInput.status },
       );
     }
 
-    const finalSlug = generateSlug(slug || title);
+    const input = parsedInput.data;
     const existing = await prisma.post.findUnique({
-      where: { slug: finalSlug },
+      where: { slug: input.slug },
     });
 
     if (existing) {
@@ -101,28 +87,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const finalTagIds = tagIds || tags || [];
-    const isScheduled = scheduledAt && new Date(scheduledAt) > new Date();
-    const shouldPublish = published && !isScheduled;
-    const safeContent = sanitizeRichContent(content);
+    const safeContent = sanitizeRichContent(input.content);
 
     const post = await prisma.post.create({
       data: {
-        title,
-        slug: finalSlug,
+        title: input.title,
+        slug: input.slug,
         content: safeContent,
-        excerpt,
-        coverImage,
-        published: shouldPublish,
-        publishedAt: shouldPublish ? new Date() : null,
-        scheduledAt: isScheduled ? new Date(scheduledAt) : null,
+        excerpt: input.excerpt,
+        coverImage: input.coverImage,
+        published: input.shouldPublish,
+        publishedAt: input.shouldPublish ? new Date() : null,
+        scheduledAt: input.scheduledAt,
         authorId: session.user.id,
-        categoryId: categoryId || null,
-        seriesId: seriesId || null,
-        seriesOrder: seriesOrder || null,
-        tags: finalTagIds.length
+        categoryId: input.categoryId,
+        seriesId: input.seriesId,
+        seriesOrder: input.seriesOrder,
+        tags: input.tagIds.length
           ? {
-              create: finalTagIds.map((tagId: string) => ({
+              create: input.tagIds.map((tagId) => ({
                 tagId,
               })),
             }
@@ -144,7 +127,7 @@ export async function POST(request: NextRequest) {
       userName: session.user.name || undefined,
       action: "create",
       module: "post",
-      target: title,
+      target: input.title,
       targetId: post.id,
       ip,
       userAgent,
@@ -156,7 +139,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: post,
-      message: isScheduled ? "Post scheduled" : "Post created",
+      message: input.isScheduled ? "Post scheduled" : "Post created",
     });
   } catch (error) {
     console.error("Create post error:", error);

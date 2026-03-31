@@ -1,29 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { Card, Tag, Spin } from "antd";
+import Link from "next/link";
+import { Card, Spin, Tag } from "antd";
 import {
   ClockCircleOutlined,
-  FolderOutlined,
-  FireOutlined,
   FileTextOutlined,
+  FireOutlined,
+  FolderOutlined,
   TagsOutlined,
 } from "@ant-design/icons";
+import { DEFAULT_SITE_MOTTO } from "@/lib/site-config";
 
 interface Category {
   id: string;
   name: string;
   slug: string;
-  _count: { posts: number };
+  _count: {
+    posts: number;
+  };
 }
 
 interface TagItem {
   id: string;
   name: string;
   slug: string;
-  _count: { posts: number };
+  _count: {
+    posts: number;
+  };
 }
 
 interface RecentPost {
@@ -34,6 +39,33 @@ interface RecentPost {
   viewCount?: number;
 }
 
+interface CategoriesResponse {
+  success: boolean;
+  data: Category[];
+}
+
+interface TagsResponse {
+  success: boolean;
+  data: TagItem[];
+}
+
+interface PostsResponse {
+  success: boolean;
+  data: RecentPost[];
+  pagination?: {
+    total: number;
+  };
+}
+
+interface ProfileResponse {
+  success: boolean;
+  motto?: string;
+  postCount?: number;
+  commentCount?: number;
+  avatarUrl?: string | null;
+  bannerUrl?: string | null;
+}
+
 export default function BlogSidebar() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
@@ -41,44 +73,58 @@ export default function BlogSidebar() {
   const [hotPosts, setHotPosts] = useState<RecentPost[]>([]);
   const [postCount, setPostCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
-  const [motto, setMotto] = useState("记录与分享，让技术更有温度");
+  const [motto, setMotto] = useState(DEFAULT_SITE_MOTTO);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadSidebarData();
-  }, []);
-
-  const loadSidebarData = async () => {
+  const loadSidebarData = useCallback(async () => {
     try {
-      const [categoriesRes, tagsRes, postsRes, hotRes, profileRes] = await Promise.all([
-        fetch("/api/categories"),
-        fetch("/api/tags"),
-        fetch("/api/posts?pageSize=5"),
-        fetch("/api/posts?pageSize=5&sort=hot"),
-        fetch("/api/settings/profile"),
-      ]);
+      const [categoriesRes, tagsRes, postsRes, hotRes, profileRes] =
+        await Promise.all([
+          fetch("/api/categories"),
+          fetch("/api/tags"),
+          fetch("/api/posts?pageSize=5"),
+          fetch("/api/posts?pageSize=5&sort=hot"),
+          fetch("/api/settings/profile"),
+        ]);
 
-      const [categoriesData, tagsData, postsData, hotData, profileData] = await Promise.all([
-        categoriesRes.json(),
-        tagsRes.json(),
-        postsRes.json(),
-        hotRes.json(),
-        profileRes.json(),
-      ]);
+      const [categoriesData, tagsData, postsData, hotData, profileData] =
+        (await Promise.all([
+          categoriesRes.json(),
+          tagsRes.json(),
+          postsRes.json(),
+          hotRes.json(),
+          profileRes.json(),
+        ])) as [
+          CategoriesResponse,
+          TagsResponse,
+          PostsResponse,
+          PostsResponse,
+          ProfileResponse,
+        ];
 
-      if (categoriesData.success) setCategories(categoriesData.data);
-      if (tagsData.success) setTags(tagsData.data.slice(0, 15));
+      if (categoriesData.success) {
+        setCategories(categoriesData.data);
+      }
+
+      if (tagsData.success) {
+        setTags(tagsData.data.slice(0, 15));
+      }
+
       if (postsData.success) {
         setRecentPosts(postsData.data);
         setPostCount(postsData.pagination?.total || postsData.data.length);
       }
-      if (hotData.success) setHotPosts(hotData.data);
+
+      if (hotData.success) {
+        setHotPosts(hotData.data);
+      }
+
       if (profileData.success) {
-        setPostCount(profileData.postCount);
+        setPostCount(profileData.postCount || 0);
         setCommentCount(profileData.commentCount || 0);
-        setMotto(profileData.motto || motto);
+        setMotto(profileData.motto || DEFAULT_SITE_MOTTO);
         setAvatarUrl(profileData.avatarUrl || null);
         setBannerUrl(profileData.bannerUrl || null);
       }
@@ -87,22 +133,34 @@ export default function BlogSidebar() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("zh-CN", {
+  useEffect(() => {
+    void loadSidebarData();
+  }, [loadSidebarData]);
+
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("zh-CN", {
       month: "2-digit",
       day: "2-digit",
     });
-  };
 
-  // 时间进度
   const now = new Date();
-  const dayProgress = ((now.getHours() * 60 + now.getMinutes()) / (24 * 60)) * 100;
+  const dayProgress =
+    ((now.getHours() * 60 + now.getMinutes()) / (24 * 60)) * 100;
   const weekProgress = ((now.getDay() || 7) / 7) * 100;
-  const monthProgress = (now.getDate() / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()) * 100;
-  const yearProgress = ((now.getMonth() * 31 + now.getDate()) / 365) * 100;
+  const daysInMonth = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    0,
+  ).getDate();
+  const monthProgress = (now.getDate() / daysInMonth) * 100;
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const startOfNextYear = new Date(now.getFullYear() + 1, 0, 1);
+  const yearProgress =
+    ((now.getTime() - startOfYear.getTime()) /
+      (startOfNextYear.getTime() - startOfYear.getTime())) *
+    100;
 
   if (loading) {
     return (
@@ -114,7 +172,6 @@ export default function BlogSidebar() {
 
   return (
     <div className="blog-sidebar">
-      {/* 个人简介 */}
       <Card className="blog-sidebar-card sidebar-profile">
         <div
           className="sidebar-profile-banner"
@@ -130,7 +187,13 @@ export default function BlogSidebar() {
         />
         <div className="sidebar-profile-avatar">
           {avatarUrl ? (
-            <Image src={avatarUrl} alt="头像" width={80} height={80} style={{ objectFit: "cover" }} />
+            <Image
+              src={avatarUrl}
+              alt="Avatar"
+              width={80}
+              height={80}
+              style={{ objectFit: "cover" }}
+            />
           ) : (
             <span className="sidebar-profile-avatar-icon">V</span>
           )}
@@ -140,65 +203,75 @@ export default function BlogSidebar() {
           <div className="sidebar-profile-stats">
             <div className="sidebar-profile-stat">
               <span className="sidebar-profile-stat-num">{postCount}</span>
-              <span className="sidebar-profile-stat-label">文章数</span>
+              <span className="sidebar-profile-stat-label">Posts</span>
             </div>
             <div className="sidebar-profile-stat-divider" />
             <div className="sidebar-profile-stat">
               <span className="sidebar-profile-stat-num">
                 {commentCount.toLocaleString()}
               </span>
-              <span className="sidebar-profile-stat-label">评论量</span>
+              <span className="sidebar-profile-stat-label">Comments</span>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* 时间进度 */}
       <Card
         title={
           <span className="sidebar-card-title">
-            <ClockCircleOutlined /> 时间进度
+            <ClockCircleOutlined /> Time Progress
           </span>
         }
         className="blog-sidebar-card"
       >
         <div className="sidebar-progress-list">
           <div className="sidebar-progress-item">
-            <span>今日</span>
+            <span>Today</span>
             <div className="sidebar-progress-bar">
-              <div className="sidebar-progress-fill" style={{ width: `${dayProgress}%` }} />
+              <div
+                className="sidebar-progress-fill"
+                style={{ width: `${dayProgress}%` }}
+              />
             </div>
             <span>{Math.round(dayProgress)}%</span>
           </div>
           <div className="sidebar-progress-item">
-            <span>本周</span>
+            <span>This Week</span>
             <div className="sidebar-progress-bar">
-              <div className="sidebar-progress-fill" style={{ width: `${weekProgress}%` }} />
+              <div
+                className="sidebar-progress-fill"
+                style={{ width: `${weekProgress}%` }}
+              />
             </div>
             <span>{Math.round(weekProgress)}%</span>
           </div>
           <div className="sidebar-progress-item">
-            <span>本月</span>
+            <span>This Month</span>
             <div className="sidebar-progress-bar">
-              <div className="sidebar-progress-fill" style={{ width: `${monthProgress}%` }} />
+              <div
+                className="sidebar-progress-fill"
+                style={{ width: `${monthProgress}%` }}
+              />
             </div>
             <span>{Math.round(monthProgress)}%</span>
           </div>
           <div className="sidebar-progress-item">
-            <span>今年</span>
+            <span>This Year</span>
             <div className="sidebar-progress-bar">
-              <div className="sidebar-progress-fill" style={{ width: `${yearProgress}%` }} />
+              <div
+                className="sidebar-progress-fill"
+                style={{ width: `${yearProgress}%` }}
+              />
             </div>
             <span>{Math.round(yearProgress)}%</span>
           </div>
         </div>
       </Card>
 
-      {/* Categories */}
       <Card
         title={
           <span className="sidebar-card-title">
-            <FolderOutlined /> 分类
+            <FolderOutlined /> Categories
           </span>
         }
         className="blog-sidebar-card"
@@ -211,19 +284,16 @@ export default function BlogSidebar() {
               className="blog-sidebar-item"
             >
               <span>{category.name}</span>
-              <span className="blog-sidebar-count">
-                {category._count.posts}
-              </span>
+              <span className="blog-sidebar-count">{category._count.posts}</span>
             </Link>
           ))}
         </div>
       </Card>
 
-      {/* Hot Posts */}
       <Card
         title={
           <span className="sidebar-card-title">
-            <FireOutlined /> 热门文章
+            <FireOutlined /> Hot Posts
           </span>
         }
         className="blog-sidebar-card"
@@ -237,18 +307,17 @@ export default function BlogSidebar() {
             >
               <span className="blog-sidebar-post-title">{post.title}</span>
               <span className="blog-sidebar-date">
-                {post.viewCount || 0} 阅读 · {formatDate(post.publishedAt)}
+                {post.viewCount || 0} views • {formatDate(post.publishedAt)}
               </span>
             </Link>
           ))}
         </div>
       </Card>
 
-      {/* Recent Posts */}
       <Card
         title={
           <span className="sidebar-card-title">
-            <FileTextOutlined /> 最新文章
+            <FileTextOutlined /> Recent Posts
           </span>
         }
         className="blog-sidebar-card"
@@ -261,19 +330,16 @@ export default function BlogSidebar() {
               className="blog-sidebar-item"
             >
               <span className="blog-sidebar-post-title">{post.title}</span>
-              <span className="blog-sidebar-date">
-                {formatDate(post.publishedAt)}
-              </span>
+              <span className="blog-sidebar-date">{formatDate(post.publishedAt)}</span>
             </Link>
           ))}
         </div>
       </Card>
 
-      {/* Tags */}
       <Card
         title={
           <span className="sidebar-card-title">
-            <TagsOutlined /> 标签
+            <TagsOutlined /> Tags
           </span>
         }
         className="blog-sidebar-card"

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Pagination, Spin, Empty } from "antd";
+import { Empty, Pagination, Spin } from "antd";
 import { TagOutlined } from "@ant-design/icons";
 import PostCard from "@/components/blog/PostCard";
 import BlogSidebar from "@/components/blog/BlogSidebar";
@@ -30,9 +30,30 @@ interface Post {
   }>;
 }
 
+interface TagSummary {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface TagsResponse {
+  success: boolean;
+  data: TagSummary[];
+  error?: string;
+}
+
+interface PostsResponse {
+  success: boolean;
+  data: Post[];
+  pagination: {
+    total: number;
+  };
+  error?: string;
+}
+
 export default function TagPage() {
-  const params = useParams();
-  const slug = params.slug as string;
+  const params = useParams<{ slug: string }>();
+  const slug = params.slug;
   const [posts, setPosts] = useState<Post[]>([]);
   const [tagName, setTagName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -40,62 +61,73 @@ export default function TagPage() {
   const [total, setTotal] = useState(0);
   const pageSize = 10;
 
-  useEffect(() => {
-    if (slug) {
-      loadTag();
-      loadPosts();
+  const loadTagPage = useCallback(async () => {
+    if (!slug) {
+      setPosts([]);
+      setTagName("");
+      setTotal(0);
+      setLoading(false);
+      return;
     }
-  }, [slug, page]);
 
-  const loadTag = async () => {
-    try {
-      const res = await fetch("/api/tags");
-      const data = await res.json();
-      if (data.success) {
-        const tag = data.data.find((t: any) => t.slug === slug);
-        if (tag) {
-          setTagName(tag.name);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load tag:", error);
-    }
-  };
-
-  const loadPosts = async () => {
     setLoading(true);
+
     try {
-      const res = await fetch("/api/tags");
-      const tagsData = await res.json();
-      if (tagsData.success) {
-        const tag = tagsData.data.find((t: any) => t.slug === slug);
-        if (tag) {
-          const postsRes = await fetch(
-            `/api/posts?tagId=${tag.id}&page=${page}&pageSize=${pageSize}`,
-          );
-          const postsData = await postsRes.json();
-          if (postsData.success) {
-            setPosts(postsData.data);
-            setTotal(postsData.pagination.total);
-          }
-        }
+      const tagsRes = await fetch("/api/tags");
+      const tagsData = (await tagsRes.json()) as TagsResponse;
+
+      if (!tagsData.success) {
+        setPosts([]);
+        setTagName("");
+        setTotal(0);
+        return;
+      }
+
+      const tag = tagsData.data.find((item) => item.slug === slug);
+
+      if (!tag) {
+        setPosts([]);
+        setTagName("");
+        setTotal(0);
+        return;
+      }
+
+      setTagName(tag.name);
+
+      const postsRes = await fetch(
+        `/api/posts?tagId=${tag.id}&page=${page}&pageSize=${pageSize}`,
+      );
+      const postsData = (await postsRes.json()) as PostsResponse;
+
+      if (postsData.success) {
+        setPosts(postsData.data);
+        setTotal(postsData.pagination.total);
+      } else {
+        setPosts([]);
+        setTotal(0);
       }
     } catch (error) {
-      console.error("Failed to load posts:", error);
+      console.error("Failed to load tag page:", error);
+      setPosts([]);
+      setTagName("");
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, slug]);
+
+  useEffect(() => {
+    void loadTagPage();
+  }, [loadTagPage]);
 
   return (
     <div className="blog-container">
       <div className="blog-content-inner">
         <div className="blog-posts">
-          {/* Tag Header */}
           <div className="category-header">
             <TagOutlined style={{ fontSize: 32, color: "#722ed1" }} />
-            <h1>{tagName || "标签"}</h1>
-            <p>共 {total} 篇文章</p>
+            <h1>{tagName || "Tag"}</h1>
+            <p>{total} posts</p>
           </div>
 
           {loading ? (
@@ -103,7 +135,7 @@ export default function TagPage() {
               <Spin size="large" />
             </div>
           ) : posts.length === 0 ? (
-            <Empty description="该标签下暂无文章" />
+            <Empty description="No posts found for this tag." />
           ) : (
             <>
               {posts.map((post) => (
@@ -118,7 +150,7 @@ export default function TagPage() {
                     pageSize={pageSize}
                     onChange={setPage}
                     showSizeChanger={false}
-                    showTotal={(t) => `共 ${t} 篇文章`}
+                    showTotal={(count) => `${count} posts`}
                   />
                 </div>
               )}

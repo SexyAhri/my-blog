@@ -1,28 +1,31 @@
 "use client";
 
-import { useState, ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { App } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import type { FormInstance } from "antd";
 import {
   SearchToolbar,
   DataTable,
   FormDrawer,
   ViewDrawer,
 } from "@/components/common";
-import type { ColumnsType } from "antd/es/table";
 
-interface CrudPageProps<T extends { id: string }> {
+type DrawerInitialValues<FormValues extends object> = Parameters<
+  FormInstance<FormValues>["setFieldsValue"]
+>[0];
+
+interface CrudPageProps<T extends { id: string }, FormValues extends object> {
   dataSource: T[];
   loading?: boolean;
-  onAdd?: (values: any) => void;
-  onUpdate?: (id: string, values: any) => void;
+  onAdd?: (values: FormValues) => void | Promise<void>;
+  onUpdate?: (id: string, values: FormValues) => void | Promise<void>;
   onDelete?: (id: string) => void;
-
   renderColumns: (handlers: {
     onView?: (record: T) => void;
     onEdit: (record: T) => void;
     onDelete: (id: string) => void;
   }) => ColumnsType<T>;
-
   rowKey?: string;
   searchPlaceholder?: string;
   searchFields?: (keyof T)[];
@@ -31,9 +34,13 @@ interface CrudPageProps<T extends { id: string }> {
   formTitle?: { add: string; edit: string; view: string };
   formFields?: (editingRecord: T | null) => ReactNode;
   viewFields?: (record: T) => ReactNode;
-  defaultFormValues?: Record<string, any>;
+  defaultFormValues?: DrawerInitialValues<FormValues>;
   addButtonText?: string;
-  onBeforeSubmit?: (values: any, editingRecord: T | null) => any;
+  onBeforeSubmit?: (
+    values: FormValues,
+    editingRecord: T | null,
+  ) => FormValues | Promise<FormValues>;
+  mapRecordToFormValues?: (record: T) => DrawerInitialValues<FormValues>;
   showPagination?: boolean;
   pageSize?: number;
   hideAddButton?: boolean;
@@ -41,7 +48,10 @@ interface CrudPageProps<T extends { id: string }> {
   onAddClick?: () => void;
 }
 
-export function CrudPage<T extends { id: string; status?: string }>({
+export function CrudPage<
+  T extends { id: string; status?: string },
+  FormValues extends object = Partial<T>,
+>({
   dataSource,
   loading = false,
   onAdd,
@@ -49,22 +59,23 @@ export function CrudPage<T extends { id: string; status?: string }>({
   onDelete,
   renderColumns,
   rowKey = "id",
-  searchPlaceholder = "搜索...",
+  searchPlaceholder = "Search...",
   searchFields = [],
   showStatusFilter = false,
   statusOptions,
-  formTitle = { add: "新增", edit: "编辑", view: "查看" },
+  formTitle = { add: "Add", edit: "Edit", view: "View" },
   formFields,
   viewFields,
-  defaultFormValues = {},
-  addButtonText = "新增",
+  defaultFormValues,
+  addButtonText = "Add",
   onBeforeSubmit,
+  mapRecordToFormValues,
   showPagination = true,
   pageSize = 20,
   hideAddButton = false,
   hideFormDrawer = false,
   onAddClick,
-}: CrudPageProps<T>) {
+}: CrudPageProps<T, FormValues>) {
   const { message } = App.useApp();
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
@@ -79,10 +90,11 @@ export function CrudPage<T extends { id: string; status?: string }>({
       searchFields.some((field) => {
         const value = item[field];
         return (
-          value &&
+          value != null &&
           String(value).toLowerCase().includes(searchText.toLowerCase())
         );
       });
+
     const matchStatus = !statusFilter || item.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -92,6 +104,7 @@ export function CrudPage<T extends { id: string; status?: string }>({
       onAddClick();
       return;
     }
+
     setEditingRecord(null);
     setDrawerOpen(true);
   };
@@ -108,22 +121,25 @@ export function CrudPage<T extends { id: string; status?: string }>({
 
   const handleDelete = (id: string) => {
     if (onDelete) {
-      onDelete(id);
+      void onDelete(id);
     }
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: FormValues) => {
     let finalValues = values;
+
     if (onBeforeSubmit) {
-      finalValues = onBeforeSubmit(values, editingRecord);
+      finalValues = await onBeforeSubmit(values, editingRecord);
     }
+
     if (editingRecord && onUpdate) {
-      onUpdate(editingRecord.id, finalValues);
-      message.success("更新成功");
+      await onUpdate(editingRecord.id, finalValues);
+      message.success("Updated successfully");
     } else if (onAdd) {
-      onAdd(finalValues);
-      message.success("添加成功");
+      await onAdd(finalValues);
+      message.success("Added successfully");
     }
+
     setDrawerOpen(false);
   };
 
@@ -132,6 +148,15 @@ export function CrudPage<T extends { id: string; status?: string }>({
     onEdit: handleEdit,
     onDelete: handleDelete,
   });
+
+  const fallbackFormValues = {} as DrawerInitialValues<FormValues>;
+
+  const resolvedInitialValues: DrawerInitialValues<FormValues> | undefined =
+    editingRecord
+      ? mapRecordToFormValues
+        ? mapRecordToFormValues(editingRecord)
+        : (editingRecord as unknown as DrawerInitialValues<FormValues>)
+      : defaultFormValues ?? fallbackFormValues;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -159,12 +184,12 @@ export function CrudPage<T extends { id: string; status?: string }>({
       />
       {!hideFormDrawer && formFields && (
         <>
-          <FormDrawer
+          <FormDrawer<FormValues>
             title={editingRecord ? formTitle.edit : formTitle.add}
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}
             onSubmit={handleSubmit}
-            initialValues={editingRecord || defaultFormValues}
+            initialValues={resolvedInitialValues}
           >
             {formFields(editingRecord)}
           </FormDrawer>
