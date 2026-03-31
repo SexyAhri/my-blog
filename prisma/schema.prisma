@@ -64,29 +64,29 @@ model VerificationToken {
 }
 
 model Post {
-  id           String    @id @default(cuid())
-  title        String
-  slug         String    @unique
-  content      String
-  excerpt      String?
-  coverImage   String?
-  published    Boolean   @default(false)
-  viewCount    Int       @default(0)
-  likeCount    Int       @default(0)
-  authorId     String
-  categoryId   String?
-  seriesId     String?
-  seriesOrder  Int?
-  scheduledAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  publishedAt  DateTime?
-  comments     Comment[]
-  tags         PostTag[]
-  likes        PostLike[]
-  author       User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  category     Category? @relation(fields: [categoryId], references: [id])
-  series       Series?   @relation(fields: [seriesId], references: [id])
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  content     String
+  excerpt     String?
+  coverImage  String?
+  published   Boolean    @default(false)
+  viewCount   Int        @default(0)
+  likeCount   Int        @default(0)
+  authorId    String
+  categoryId  String?
+  seriesId    String?
+  seriesOrder Int?
+  scheduledAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  publishedAt DateTime?
+  comments    Comment[]
+  tags        PostTag[]
+  likes       PostLike[]
+  author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category    Category?  @relation(fields: [categoryId], references: [id])
+  series      Series?    @relation(fields: [seriesId], references: [id])
 
   @@index([slug])
   @@index([published])
@@ -176,17 +176,16 @@ model Setting {
   @@map("settings")
 }
 
-
-// 操作日志
+// Operation audit log
 model OperationLog {
   id        String   @id @default(cuid())
   userId    String?
   userName  String?
-  action    String   // create, update, delete, upload
-  module    String   // post, category, tag, media, setting
-  target    String?  // 操作对象名称
-  targetId  String?  // 操作对象ID
-  detail    String?  // 详细信息
+  action    String // create, update, delete, upload
+  module    String // post, category, tag, media, setting
+  target    String? // Human-readable target name
+  targetId  String? // Target record id
+  detail    String? // Extra event detail
   ip        String?
   userAgent String?
   createdAt DateTime @default(now())
@@ -197,7 +196,7 @@ model OperationLog {
   @@map("operation_logs")
 }
 
-// 登录日志
+// Login activity log
 model LoginLog {
   id        String   @id @default(cuid())
   userId    String?
@@ -207,7 +206,7 @@ model LoginLog {
   ip        String?
   userAgent String?
   location  String?
-  message   String?  // 登录失败原因
+  message   String? // Success or failure note
   createdAt DateTime @default(now())
 
   @@index([userId])
@@ -215,8 +214,7 @@ model LoginLog {
   @@map("login_logs")
 }
 
-
-// 访问统计
+// Page view tracking
 model PageView {
   id        String   @id @default(cuid())
   path      String
@@ -233,7 +231,7 @@ model PageView {
   @@map("page_views")
 }
 
-// 每日统计汇总
+// Daily aggregated stats
 model DailyStat {
   id        String   @id @default(cuid())
   date      DateTime @unique
@@ -247,8 +245,7 @@ model DailyStat {
   @@map("daily_stats")
 }
 
-
-// 文章系列/专栏
+// Post series
 model Series {
   id          String   @id @default(cuid())
   name        String   @unique
@@ -262,9 +259,9 @@ model Series {
   @@map("series")
 }
 
-// 文章点赞
+// Post likes
 model PostLike {
-visitorId String
+  visitorId String
   postId    String
   createdAt DateTime @default(now())
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
