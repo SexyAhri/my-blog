@@ -67,7 +67,7 @@ export default function ProfilePage() {
       const data = (await res.json()) as ProfileResponse;
 
       if (!data.success || !data.data) {
-        message.error(data.error || "Failed to load profile");
+        message.error(data.error || "加载个人资料失败");
         return;
       }
 
@@ -78,7 +78,7 @@ export default function ProfilePage() {
         image: data.data.image || undefined,
       });
     } catch {
-      message.error("Failed to load profile");
+      message.error("加载个人资料失败");
     } finally {
       setLoading(false);
     }
@@ -105,7 +105,7 @@ export default function ProfilePage() {
       const data = (await res.json()) as ProfileResponse;
 
       if (data.success) {
-        message.success("Profile saved");
+        message.success("个人资料已保存");
         await update({
           ...session,
           user: {
@@ -115,10 +115,10 @@ export default function ProfilePage() {
           },
         });
       } else {
-        message.error(data.error || "Failed to save profile");
+        message.error(data.error || "保存个人资料失败");
       }
     } catch {
-      message.error("Failed to save profile");
+      message.error("保存个人资料失败");
     } finally {
       setSaving(false);
     }
@@ -142,17 +142,17 @@ export default function ProfilePage() {
       };
 
       if (data.success) {
-        message.success("Password updated. Please sign in again.");
+        message.success("密码已更新，请重新登录。");
         passwordForm.resetFields();
 
         setTimeout(() => {
           void signOut({ callbackUrl: "/admin/login" });
         }, 1500);
       } else {
-        message.error(data.error || "Failed to update password");
+        message.error(data.error || "更新密码失败");
       }
     } catch {
-      message.error("Failed to update password");
+      message.error("更新密码失败");
     } finally {
       setSavingPassword(false);
     }
@@ -162,10 +162,10 @@ export default function ProfilePage() {
     <Spin spinning={loading}>
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <h2 style={{ margin: "0 0 24px", fontSize: 20, fontWeight: 600 }}>
-          Profile
+          个人资料
         </h2>
 
-        <Card title="Basic Information" style={{ marginBottom: 24 }}>
+        <Card title="基本信息" style={{ marginBottom: 24 }}>
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <div style={{ position: "relative", display: "inline-block" }}>
               <Avatar
@@ -198,7 +198,7 @@ export default function ProfilePage() {
                     form.setFieldValue("image", undefined);
                   }}
                 >
-                  Remove avatar
+                  移除头像
                 </Button>
               </div>
             )}
@@ -209,29 +209,29 @@ export default function ProfilePage() {
               name="image"
               hidden
               rules={[
-                createOptionalImageSourceRule("Avatar", PROFILE_LIMITS.avatar),
+                createOptionalImageSourceRule("头像", PROFILE_LIMITS.avatar),
               ]}
             >
               <Input />
             </Form.Item>
             <Form.Item
-              label="Name"
+              label="名称"
               name="name"
               rules={[
                 createRequiredTrimmedRule(
-                  "Display name",
+                  "显示名称",
                   PROFILE_LIMITS.name,
                 ),
               ]}
             >
               <Input
                 prefix={<UserOutlined />}
-                placeholder="Display name"
+                placeholder="输入显示名称"
                 maxLength={PROFILE_LIMITS.name}
                 showCount
               />
             </Form.Item>
-            <Form.Item label="Email" name="email">
+            <Form.Item label="邮箱" name="email">
               <Input disabled />
             </Form.Item>
             <Form.Item style={{ marginBottom: 0 }}>
@@ -241,40 +241,40 @@ export default function ProfilePage() {
                 icon={<SaveOutlined />}
                 loading={saving}
               >
-                Save Changes
+                保存修改
               </Button>
             </Form.Item>
           </Form>
         </Card>
 
-        <Card title="Change Password">
+        <Card title="修改密码">
           <Form
             form={passwordForm}
             layout="vertical"
             onFinish={handlePasswordSubmit}
           >
             <Form.Item
-              label="Current Password"
+              label="当前密码"
               name="currentPassword"
-              rules={[{ required: true, message: "Enter your current password" }]}
+              rules={[{ required: true, message: "请输入当前密码" }]}
             >
               <Input.Password
                 prefix={<LockOutlined />}
-                placeholder="Current password"
+                placeholder="输入当前密码"
               />
             </Form.Item>
             <Form.Item
-              label="New Password"
+              label="新密码"
               name="newPassword"
               rules={[
-                { required: true, message: "Enter a new password" },
+                { required: true, message: "请输入新密码" },
                 {
                   min: PROFILE_LIMITS.passwordMin,
-                  message: `Password must be at least ${PROFILE_LIMITS.passwordMin} characters`,
+                  message: `密码长度不能少于 ${PROFILE_LIMITS.passwordMin} 位`,
                 },
                 {
                   max: PROFILE_LIMITS.passwordMax,
-                  message: `Password must be ${PROFILE_LIMITS.passwordMax} characters or less`,
+                  message: `密码长度不能超过 ${PROFILE_LIMITS.passwordMax} 位`,
                 },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
@@ -284,34 +284,34 @@ export default function ProfilePage() {
 
                     return Promise.reject(
                       new Error(
-                        "New password must be different from the current password",
+                        "新密码不能与当前密码相同",
                       ),
                     );
                   },
                 }),
               ]}
             >
-              <Input.Password prefix={<LockOutlined />} placeholder="New password" />
+              <Input.Password prefix={<LockOutlined />} placeholder="输入新密码" />
             </Form.Item>
             <Form.Item
-              label="Confirm Password"
+              label="确认密码"
               name="confirmPassword"
               rules={[
-                { required: true, message: "Confirm your new password" },
+                { required: true, message: "请再次输入新密码" },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
                     if (!value || getFieldValue("newPassword") === value) {
                       return Promise.resolve();
                     }
 
-                    return Promise.reject(new Error("Passwords do not match"));
+                    return Promise.reject(new Error("两次输入的密码不一致"));
                   },
                 }),
               ]}
             >
               <Input.Password
                 prefix={<LockOutlined />}
-                placeholder="Confirm new password"
+                placeholder="再次输入新密码"
               />
             </Form.Item>
             <Form.Item style={{ marginBottom: 0 }}>
@@ -321,7 +321,7 @@ export default function ProfilePage() {
                 icon={<LockOutlined />}
                 loading={savingPassword}
               >
-                Update Password
+                更新密码
               </Button>
             </Form.Item>
           </Form>

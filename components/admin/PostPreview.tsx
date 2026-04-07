@@ -73,8 +73,8 @@ export default function PostPreview({
 
       navigator.clipboard
         .writeText(text)
-        .then(() => message.success("Copied"))
-        .catch(() => message.error("Copy failed"));
+        .then(() => message.success("已复制"))
+        .catch(() => message.error("复制失败"));
     };
 
     document.addEventListener("click", handleCopy);
@@ -90,7 +90,7 @@ export default function PostPreview({
       title={
         <Space>
           <EyeOutlined />
-          <span>Post Preview</span>
+          <span>文章预览</span>
         </Space>
       }
       styles={{

@@ -1,15 +1,14 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { useState } from "react";
 import { Input, Switch } from "antd";
 import {
-  SearchOutlined,
-  MenuOutlined,
   CloseOutlined,
-  SunOutlined,
+  MenuOutlined,
   MoonOutlined,
+  SearchOutlined,
+  SunOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/app/providers";
@@ -22,14 +21,15 @@ export default function BlogHeader() {
   const switchRef = useRef<HTMLSpanElement>(null);
 
   const handleSearch = () => {
-    if (searchValue.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchValue)}`);
-      setSearchValue("");
+    if (!searchValue.trim()) {
+      return;
     }
+
+    router.push(`/search?q=${encodeURIComponent(searchValue)}`);
+    setSearchValue("");
   };
 
-  // 创建涟漪效果（参考 db-admin-dashboard）
-  const createRipple = (x: number, y: number, toLight: boolean) => {
+  function createRipple(x: number, y: number, toLight: boolean) {
     const rippleContainer = document.createElement("div");
     rippleContainer.className = "theme-ripple-container";
     rippleContainer.style.cssText = `
@@ -47,7 +47,7 @@ export default function BlogHeader() {
       ? "rgba(79, 110, 247, 0.6)"
       : "rgba(255, 255, 255, 0.5)";
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 3; i += 1) {
       const ripple = document.createElement("div");
       ripple.className = "theme-ripple";
       ripple.style.cssText = `
@@ -68,9 +68,8 @@ export default function BlogHeader() {
 
     document.body.appendChild(rippleContainer);
     setTimeout(() => rippleContainer.remove(), 1200);
-  };
+  }
 
-  // 圆形扩散切换主题（参考 db-admin-dashboard）
   const handleThemeChange = (checked: boolean) => {
     const newTheme = checked ? "dark" : "light";
     const toLight = !checked;
@@ -89,7 +88,7 @@ export default function BlogHeader() {
 
     const maxRadius = Math.hypot(
       Math.max(x, window.innerWidth - x),
-      Math.max(y, window.innerHeight - y)
+      Math.max(y, window.innerHeight - y),
     );
 
     document.documentElement.style.setProperty("--theme-x", `${x}px`);
@@ -102,21 +101,19 @@ export default function BlogHeader() {
   };
 
   const menuItems = [
-    { label: "首页", href: "/" },
-    { label: "分类", href: "/categories" },
-    { label: "归档", href: "/archive" },
-    { label: "关于", href: "/about" },
+    { label: "Home", href: "/" },
+    { label: "Categories", href: "/categories" },
+    { label: "Archive", href: "/archive" },
+    { label: "About", href: "/about" },
   ];
 
   return (
     <header className="blog-header">
       <div className="blog-header-container">
-        {/* Logo */}
         <Link href="/" className="blog-logo">
           <span className="blog-logo-text">VixenAhri</span>
         </Link>
 
-        {/* Desktop Navigation */}
         <nav className="blog-nav desktop-nav">
           {menuItems.map((item) => (
             <Link key={item.href} href={item.href} className="blog-nav-link">
@@ -125,14 +122,13 @@ export default function BlogHeader() {
           ))}
         </nav>
 
-        {/* Search & Theme Toggle */}
         <div className="blog-header-actions">
           <div className="blog-search">
             <Input
-              placeholder="搜索文章..."
+              placeholder="Search posts..."
               prefix={<SearchOutlined style={{ color: "var(--blog-text-muted)" }} />}
               value={searchValue}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchValue(e.target.value)}
+              onChange={(event) => setSearchValue(event.target.value)}
               onPressEnter={handleSearch}
             />
           </div>
@@ -142,22 +138,24 @@ export default function BlogHeader() {
               unCheckedChildren={<SunOutlined />}
               checked={themeMode === "dark"}
               onChange={handleThemeChange}
-              aria-label={themeMode === "light" ? "切换到暗色模式" : "切换到亮色模式"}
+              aria-label={
+                themeMode === "light"
+                  ? "Switch to dark mode"
+                  : "Switch to light mode"
+              }
             />
           </span>
         </div>
 
-        {/* Mobile Menu Button */}
         <button
           className="mobile-menu-button"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label="菜单"
+          onClick={() => setMobileMenuOpen((current) => !current)}
+          aria-label="Menu"
         >
           {mobileMenuOpen ? <CloseOutlined /> : <MenuOutlined />}
         </button>
       </div>
 
-      {/* Mobile Navigation */}
       {mobileMenuOpen && (
         <nav className="blog-nav mobile-nav">
           {menuItems.map((item) => (

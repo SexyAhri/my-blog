@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import PostContent from "./PostContent";
 import { calculateReadingTime, renderRichContent } from "@/lib/content";
+import { getPublicCommentSectionData } from "@/lib/public-comments";
 import { getPublishedPostDetail, type PostDetailData } from "@/lib/posts";
 
 interface Props {
@@ -75,7 +76,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PostPage({ params }: Props) {
   const { slug } = await params;
-  const post = await getPost(slug);
+  const [post, commentSection] = await Promise.all([
+    getPost(slug),
+    getPublicCommentSectionData(slug),
+  ]);
 
   if (!post) {
     notFound();
@@ -134,6 +138,8 @@ export default async function PostPage({ params }: Props) {
         renderedContent={rendered.html}
         toc={rendered.toc}
         readingTime={readingTime}
+        initialComments={commentSection.comments}
+        initialCommentsEnabled={commentSection.enableComments}
       />
     </>
   );

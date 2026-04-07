@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendCommentReplyNotification } from "@/lib/email";
 import { requireAdmin } from "@/lib/admin";
+import { invalidateCommentCaches, invalidateSidebarCache } from "@/lib/cache";
 
 export async function PUT(
   request: NextRequest,
@@ -43,14 +44,17 @@ export async function PUT(
       }
     }
 
+    invalidateCommentCaches();
+    invalidateSidebarCache();
+
     return NextResponse.json({
       success: true,
       data: comment,
-      message: approved ? "Comment approved" : "Comment rejected",
+      message: approved ? "评论已通过" : "评论已拒绝",
     });
   } catch {
     return NextResponse.json(
-      { success: false, error: "Action failed" },
+      { success: false, error: "操作失败" },
       { status: 500 },
     );
   }
@@ -68,11 +72,13 @@ export async function DELETE(
 
     const { id } = await params;
     await prisma.comment.delete({ where: { id } });
+    invalidateCommentCaches();
+    invalidateSidebarCache();
 
-    return NextResponse.json({ success: true, message: "Comment deleted" });
+    return NextResponse.json({ success: true, message: "评论已删除" });
   } catch {
     return NextResponse.json(
-      { success: false, error: "Delete failed" },
+      { success: false, error: "删除失败" },
       { status: 500 },
     );
   }

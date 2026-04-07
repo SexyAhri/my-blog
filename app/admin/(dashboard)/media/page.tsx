@@ -96,20 +96,20 @@ const EMPTY_STORAGE: MediaStorageSummary = { existsInStorage: false, status: "mi
 const EMPTY_AUDIT: MediaAudit = { orphanedFiles: [], brokenReferences: [] };
 
 const SORT_OPTIONS = [
-  { value: "date", label: "Newest first" },
-  { value: "size", label: "Largest first" },
-  { value: "name", label: "Name A-Z" },
-  { value: "usage", label: "Most references" },
+  { value: "date", label: "最新上传" },
+  { value: "size", label: "文件最大" },
+  { value: "name", label: "名称 A-Z" },
+  { value: "usage", label: "引用最多" },
 ] as const;
 const USAGE_FILTER_OPTIONS = [
-  { value: "all", label: "All usage" },
-  { value: "used", label: "In use" },
-  { value: "unused", label: "Unused" },
+  { value: "all", label: "全部使用状态" },
+  { value: "used", label: "使用中" },
+  { value: "unused", label: "未使用" },
 ] as const;
 const HEALTH_FILTER_OPTIONS = [
-  { value: "all", label: "All health" },
-  { value: "available", label: "On disk" },
-  { value: "missing", label: "Missing file" },
+  { value: "all", label: "全部健康状态" },
+  { value: "available", label: "文件正常" },
+  { value: "missing", label: "文件缺失" },
 ] as const;
 
 type SortOption = (typeof SORT_OPTIONS)[number]["value"];
@@ -138,7 +138,7 @@ function renderUsageDetails(usage: MediaUsageSummary) {
   if (!usage.isUsed) {
     return (
       <div style={{ maxWidth: 320 }}>
-        <Text type="secondary">No references found. This file can be deleted safely.</Text>
+        <Text type="secondary">未发现引用，可安全删除此文件。</Text>
       </div>
     );
   }
@@ -146,7 +146,7 @@ function renderUsageDetails(usage: MediaUsageSummary) {
   return (
     <div style={{ maxWidth: 360 }}>
       <div style={{ marginBottom: 12 }}>
-        <Text strong>{usage.count} active references</Text>
+        <Text strong>{usage.count} 个有效引用</Text>
       </div>
       <Space direction="vertical" size={8} style={{ width: "100%" }}>
         {usage.references.map((reference) => (
@@ -191,7 +191,7 @@ export default function MediaPage() {
       const response = await fetch("/api/admin/media?includeAudit=true");
       const data = await response.json();
       if (!data.success) {
-        message.error(data.error || "Failed to load media.");
+        message.error(data.error || "加载媒体失败。");
         return;
       }
 
@@ -207,7 +207,7 @@ export default function MediaPage() {
         brokenReferences: data.audit?.brokenReferences ?? [],
       });
     } catch {
-      message.error("Failed to load media.");
+      message.error("加载媒体失败。");
     } finally {
       setLoading(false);
     }
@@ -258,7 +258,7 @@ export default function MediaPage() {
     setSelectedIds((current) => current.filter((id) => media.some((item) => item.id === id)));
   }, [media]);
 
-  const showUsageBlockedModal = (label: string, usage: MediaUsageSummary, title = "This file is still in use") => {
+  const showUsageBlockedModal = (label: string, usage: MediaUsageSummary, title = "该文件仍在使用中") => {
     modal.info({
       title,
       width: 520,
@@ -266,13 +266,13 @@ export default function MediaPage() {
         <div style={{ marginTop: 16 }}>
           <div style={{ marginBottom: 12 }}>
             <Text>
-              Remove the references to <Text strong>{label}</Text> before deleting it.
+              请先移除对 <Text strong>{label}</Text> 的引用，再删除它。
             </Text>
           </div>
           {renderUsageDetails(usage)}
         </div>
       ),
-      okText: "Close",
+      okText: "关闭",
     });
   };
 
@@ -284,11 +284,11 @@ export default function MediaPage() {
         return { success: false, blocked: true, error: data?.error, usage: data?.usage ?? getUsage(item) };
       }
       if (!response.ok || !data?.success) {
-        return { success: false, blocked: false, error: data?.error || "Delete failed." };
+        return { success: false, blocked: false, error: data?.error || "删除失败。" };
       }
       return { success: true, blocked: false };
     } catch {
-      return { success: false, blocked: false, error: "Delete failed." };
+      return { success: false, blocked: false, error: "删除失败。" };
     }
   }, []);
 
@@ -304,11 +304,11 @@ export default function MediaPage() {
         return { success: false, blocked: true, error: data?.error, usage: data?.usage ?? EMPTY_USAGE };
       }
       if (!response.ok || !data?.success) {
-        return { success: false, blocked: false, error: data?.error || "Delete failed." };
+        return { success: false, blocked: false, error: data?.error || "删除失败。" };
       }
       return { success: true, blocked: false };
     } catch {
-      return { success: false, blocked: false, error: "Delete failed." };
+      return { success: false, blocked: false, error: "删除失败。" };
     }
   }, []);
 
@@ -320,13 +320,13 @@ export default function MediaPage() {
       const response = await fetch("/api/admin/media", { method: "POST", body: formData });
       const data = await response.json();
       if (data.success) {
-        message.success("Upload complete.");
+        message.success("上传完成。");
         await loadMedia();
       } else {
-        message.error(data.error || "Upload failed.");
+        message.error(data.error || "上传失败。");
       }
     } catch {
-      message.error("Upload failed.");
+      message.error("上传失败。");
     } finally {
       setUploading(false);
     }
@@ -348,15 +348,15 @@ export default function MediaPage() {
       if (data.success) {
         message.success(
           getStorage(item).status === "missing"
-            ? "Replacement uploaded and storage repaired."
-            : "Media file replaced without changing its URL.",
+            ? "已上传替换文件并修复存储状态。"
+            : "已替换媒体文件，URL 保持不变。",
         );
         await loadMedia();
       } else {
-        message.error(data.error || "Replace failed.");
+        message.error(data.error || "替换失败。");
       }
     } catch {
-      message.error("Replace failed.");
+      message.error("替换失败。");
     } finally {
       setReplacingId((current) => (current === item.id ? null : current));
     }
@@ -372,15 +372,15 @@ export default function MediaPage() {
     }
 
     modal.confirm({
-      title: "Delete media record",
-      content: `Delete "${item.filename}" from the media library?`,
-      okText: "Delete",
-      cancelText: "Cancel",
+      title: "删除媒体记录",
+      content: `确定要从媒体库删除“${item.filename}”吗？`,
+      okText: "删除",
+      cancelText: "取消",
       okButtonProps: { danger: true },
       onOk: async () => {
         const result = await requestTrackedDelete(item);
         if (result.success) {
-          message.success(getStorage(item).status === "missing" ? "Media record removed." : "File deleted.");
+          message.success(getStorage(item).status === "missing" ? "已移除媒体记录。" : "文件已删除。");
           await loadMedia();
           return;
         }
@@ -388,35 +388,35 @@ export default function MediaPage() {
           showUsageBlockedModal(item.title || item.filename, result.usage ?? usage);
           return;
         }
-        message.error(result.error || "Delete failed.");
+        message.error(result.error || "删除失败。");
       },
     });
   };
 
   const handleDeleteOrphan = (file: OrphanedUploadFile) => {
     if (file.usage.isUsed) {
-      showUsageBlockedModal(file.filepath, file.usage, "This orphaned file is still referenced");
+      showUsageBlockedModal(file.filepath, file.usage, "该孤立文件仍被引用");
       return;
     }
 
     modal.confirm({
-      title: "Delete orphaned upload",
-      content: `Delete "${file.filename}" from disk? It is not tracked in the media library.`,
-      okText: "Delete",
-      cancelText: "Cancel",
+      title: "删除孤立上传文件",
+      content: `确定要从磁盘删除“${file.filename}”吗？该文件未被媒体库记录。`,
+      okText: "删除",
+      cancelText: "取消",
       okButtonProps: { danger: true },
       onOk: async () => {
         const result = await requestOrphanDelete(file.filepath);
         if (result.success) {
-          message.success("Orphaned upload deleted.");
+          message.success("已删除孤立上传文件。");
           await loadMedia();
           return;
         }
         if (result.blocked) {
-          showUsageBlockedModal(file.filepath, result.usage ?? file.usage, "This orphaned file is still referenced");
+          showUsageBlockedModal(file.filepath, result.usage ?? file.usage, "该孤立文件仍被引用");
           return;
         }
-        message.error(result.error || "Delete failed.");
+        message.error(result.error || "删除失败。");
       },
     });
   };
@@ -438,29 +438,29 @@ export default function MediaPage() {
       });
       const data = await response.json();
       if (data.success) {
-        message.success("Details updated.");
+        message.success("详情已更新。");
         setEditModalVisible(false);
         await loadMedia();
       } else {
-        message.error(data.error || "Update failed.");
+        message.error(data.error || "更新失败。");
       }
     } catch {
-      message.error("Update failed.");
+      message.error("更新失败。");
     }
   };
 
   const handleCopyUrl = async (filepath: string) => {
     try {
       await navigator.clipboard.writeText(`${window.location.origin}${filepath}`);
-      message.success("File URL copied.");
+      message.success("文件链接已复制。");
     } catch {
-      message.error("Failed to copy file URL.");
+      message.error("复制文件链接失败。");
     }
   };
 
   const handlePreview = (filepath: string, canPreview = true) => {
     if (!canPreview) {
-      message.warning("This file is missing from storage.");
+      message.warning("该文件在存储中不存在。");
       return;
     }
     setPreviewImage(`${window.location.origin}${filepath}`);
@@ -472,26 +472,26 @@ export default function MediaPage() {
     const blockedMedia = selectedMedia.filter((item) => getUsage(item).isUsed);
     const deletableMedia = selectedMedia.filter((item) => !getUsage(item).isUsed);
     if (selectedMedia.length === 0) {
-      message.info("Select at least one file.");
+      message.info("请至少选择一个文件。");
       return;
     }
     if (deletableMedia.length === 0) {
-      message.warning("The selected files are still in use.");
+      message.warning("所选文件仍在使用中。");
       if (blockedMedia[0]) showUsageBlockedModal(blockedMedia[0].title || blockedMedia[0].filename, getUsage(blockedMedia[0]));
       return;
     }
 
     modal.confirm({
-      title: "Delete selected files",
-      okText: "Delete",
-      cancelText: "Cancel",
+      title: "删除所选文件",
+      okText: "删除",
+      cancelText: "取消",
       okButtonProps: { danger: true },
       content: (
         <div>
-          <p>Delete {deletableMedia.length} unused media item{deletableMedia.length === 1 ? "" : "s"}?</p>
+          <p>确定删除 {deletableMedia.length} 个未使用的媒体文件吗？</p>
           {blockedMedia.length > 0 && (
             <p style={{ color: "#d46b08", marginBottom: 0 }}>
-              {blockedMedia.length} selected item{blockedMedia.length === 1 ? " is" : "s are"} still in use and will be skipped.
+              有 {blockedMedia.length} 个所选文件仍在使用中，将被跳过。
             </p>
           )}
         </div>
@@ -502,15 +502,15 @@ export default function MediaPage() {
         const blockedCount = blockedMedia.length + results.filter((item) => item.blocked).length;
         const failedCount = results.length - successCount - results.filter((item) => item.blocked).length;
         if (successCount > 0) {
-          message.success(`Deleted ${successCount} media item${successCount === 1 ? "" : "s"}.`);
+          message.success(`已删除 ${successCount} 个媒体文件。`);
           setSelectedIds([]);
           await loadMedia();
         }
         if (blockedCount > 0) {
-          message.warning(`${blockedCount} item${blockedCount === 1 ? " was" : "s were"} skipped because they are still in use.`);
+          message.warning(`有 ${blockedCount} 个文件因仍在使用中而被跳过。`);
         }
         if (failedCount > 0) {
-          message.error(`${failedCount} item${failedCount === 1 ? "" : "s"} could not be deleted.`);
+          message.error(`有 ${failedCount} 个文件删除失败。`);
         }
       },
     });
@@ -542,45 +542,45 @@ export default function MediaPage() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Media library</h2>
-          <Text type="secondary">{media.length} tracked files, {formatFileSize(totalSize)} total</Text>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>媒体库</h2>
+          <Text type="secondary">{media.length} 个已追踪文件，合计 {formatFileSize(totalSize)}</Text>
         </div>
         <Space wrap>
           {selectedIds.length > 0 && (
             <>
-              <Tag color="blue" style={{ marginInlineEnd: 0 }}>{selectedIds.length} selected</Tag>
-              <Button size="small" danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>Delete selected</Button>
-              <Button size="small" onClick={() => setSelectedIds([])}>Clear selection</Button>
+              <Tag color="blue" style={{ marginInlineEnd: 0 }}>已选 {selectedIds.length} 个</Tag>
+              <Button size="small" danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>删除所选</Button>
+              <Button size="small" onClick={() => setSelectedIds([])}>清空选择</Button>
             </>
           )}
-          {filteredMedia.length > 0 && <Button size="small" onClick={selectAllVisible}>{allVisibleSelected ? "Clear visible" : "Select visible"}</Button>}
-          <Input placeholder="Search filename, title, or alt text" prefix={<SearchOutlined />} value={searchText} onChange={(event) => setSearchText(event.target.value)} style={{ width: 220 }} allowClear />
+          {filteredMedia.length > 0 && <Button size="small" onClick={selectAllVisible}>{allVisibleSelected ? "清除当前可见选择" : "选择当前可见项"}</Button>}
+          <Input placeholder="搜索文件名、标题或替代文本" prefix={<SearchOutlined />} value={searchText} onChange={(event) => setSearchText(event.target.value)} style={{ width: 220 }} allowClear />
           <Select value={usageFilter} onChange={setUsageFilter} style={{ width: 120 }} options={USAGE_FILTER_OPTIONS.map((option) => ({ value: option.value, label: option.label }))} />
           <Select value={healthFilter} onChange={setHealthFilter} style={{ width: 130 }} options={HEALTH_FILTER_OPTIONS.map((option) => ({ value: option.value, label: option.label }))} />
           <Select value={sortBy} onChange={setSortBy} style={{ width: 150 }} options={SORT_OPTIONS.map((option) => ({ value: option.value, label: option.label }))} />
           <Upload beforeUpload={handleUpload} showUploadList={false} accept="image/*" multiple>
-            <Button type="primary" icon={<UploadOutlined />} loading={uploading}>Upload image</Button>
+            <Button type="primary" icon={<UploadOutlined />} loading={uploading}>上传图片</Button>
           </Upload>
         </Space>
       </div>
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={12} md={6}><Card size="small"><Text type="secondary">In use</Text><div style={{ fontSize: 24, fontWeight: 700 }}>{usedCount}</div></Card></Col>
-        <Col xs={12} md={6}><Card size="small"><Text type="secondary">Unused</Text><div style={{ fontSize: 24, fontWeight: 700 }}>{unusedCount}</div></Card></Col>
-        <Col xs={12} md={6}><Card size="small"><Text type="secondary">Missing files</Text><div style={{ fontSize: 24, fontWeight: 700, color: missingCount > 0 ? "#d4380d" : undefined }}>{missingCount}</div></Card></Col>
-        <Col xs={12} md={6}><Card size="small"><Text type="secondary">Audit issues</Text><div style={{ fontSize: 24, fontWeight: 700, color: orphanedCount > 0 || brokenReferenceCount > 0 ? "#d4380d" : undefined }}>{orphanedCount + brokenReferenceCount}</div></Card></Col>
+        <Col xs={12} md={6}><Card size="small"><Text type="secondary">使用中</Text><div style={{ fontSize: 24, fontWeight: 700 }}>{usedCount}</div></Card></Col>
+        <Col xs={12} md={6}><Card size="small"><Text type="secondary">未使用</Text><div style={{ fontSize: 24, fontWeight: 700 }}>{unusedCount}</div></Card></Col>
+        <Col xs={12} md={6}><Card size="small"><Text type="secondary">缺失文件</Text><div style={{ fontSize: 24, fontWeight: 700, color: missingCount > 0 ? "#d4380d" : undefined }}>{missingCount}</div></Card></Col>
+        <Col xs={12} md={6}><Card size="small"><Text type="secondary">审计问题</Text><div style={{ fontSize: 24, fontWeight: 700, color: orphanedCount > 0 || brokenReferenceCount > 0 ? "#d4380d" : undefined }}>{orphanedCount + brokenReferenceCount}</div></Card></Col>
       </Row>
 
       {filteredMedia.length === 0 ? (
         <Card>
           {searchText || usageFilter !== "all" || healthFilter !== "all" ? (
-            <Empty description="No media matches the current filters." image={Empty.PRESENTED_IMAGE_SIMPLE}>
-              <Button onClick={() => { setSearchText(""); setUsageFilter("all"); setHealthFilter("all"); }}>Clear filters</Button>
+            <Empty description="没有媒体符合当前筛选条件。" image={Empty.PRESENTED_IMAGE_SIMPLE}>
+              <Button onClick={() => { setSearchText(""); setUsageFilter("all"); setHealthFilter("all"); }}>清空筛选</Button>
             </Empty>
           ) : (
-            <Empty description="No media uploaded yet." image={Empty.PRESENTED_IMAGE_SIMPLE}>
+            <Empty description="还没有上传任何媒体。" image={Empty.PRESENTED_IMAGE_SIMPLE}>
               <Upload beforeUpload={handleUpload} showUploadList={false} accept="image/*" multiple>
-                <Button type="primary" icon={<UploadOutlined />}>Upload your first image</Button>
+                <Button type="primary" icon={<UploadOutlined />}>上传第一张图片</Button>
               </Upload>
             </Empty>
           )}
@@ -608,7 +608,7 @@ export default function MediaPage() {
                       ) : (
                         <div style={{ textAlign: "center", color: "#cf1322", padding: 16 }}>
                           <WarningOutlined style={{ fontSize: 28, marginBottom: 8 }} />
-                          <div>Missing from storage</div>
+                          <div>存储中缺失</div>
                         </div>
                       )}
                     </div>
@@ -616,7 +616,7 @@ export default function MediaPage() {
                   actions={[
                     <EyeOutlined key="preview" onClick={() => handlePreview(item.filepath, canPreview)} />,
                     <CopyOutlined key="copy" onClick={() => void handleCopyUrl(item.filepath)} />,
-                    <Popover key="usage" content={renderUsageDetails(usage)} title={usage.isUsed ? "Usage details" : "Usage status"} trigger="click">
+                    <Popover key="usage" content={renderUsageDetails(usage)} title={usage.isUsed ? "引用详情" : "引用状态"} trigger="click">
                       <InfoCircleOutlined />
                     </Popover>,
                     <EditOutlined key="edit" onClick={() => handleEdit(item)} />,
@@ -626,14 +626,14 @@ export default function MediaPage() {
                   <div style={{ fontSize: 12 }}>
                     <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600, marginBottom: 6 }} title={item.title || item.filename}>{item.title || item.filename}</div>
                     <Space size={[4, 4]} wrap style={{ marginBottom: 8 }}>
-                      <Tag color={usage.isUsed ? "blue" : "default"} style={{ marginInlineEnd: 0 }}>{usage.isUsed ? `${usage.count} references` : "Unused"}</Tag>
+                      <Tag color={usage.isUsed ? "blue" : "default"} style={{ marginInlineEnd: 0 }}>{usage.isUsed ? `${usage.count} 个引用` : "未使用"}</Tag>
                       <Tag style={{ marginInlineEnd: 0 }}>{formatFileSize(item.size)}</Tag>
-                      {storage.status === "missing" && <Tag color="error" style={{ marginInlineEnd: 0 }}>Missing file</Tag>}
+                      {storage.status === "missing" && <Tag color="error" style={{ marginInlineEnd: 0 }}>文件缺失</Tag>}
                     </Space>
                     <div style={{ color: "#8c8c8c", marginBottom: 4 }} title={item.filename}>{item.filename}</div>
-                    <div style={{ color: "#8c8c8c", marginBottom: 4 }}>Uploaded by {item.user.name || item.user.email}</div>
+                    <div style={{ color: "#8c8c8c", marginBottom: 4 }}>上传者：{item.user.name || item.user.email}</div>
                     <div style={{ color: "#8c8c8c", marginBottom: 8 }}>{formatDate(item.createdAt)}</div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>{usage.references[0] ? `First reference: ${usage.references[0].targetName}` : "No references found"}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>{usage.references[0] ? `首个引用：${usage.references[0].targetName}` : "未发现引用"}</Text>
                     <div style={{ marginTop: 10 }}>
                       <Upload
                         beforeUpload={(file) => {
@@ -651,8 +651,8 @@ export default function MediaPage() {
                           block
                         >
                           {storage.status === "missing"
-                            ? "Upload replacement"
-                            : "Replace file"}
+                            ? "上传替换文件"
+                            : "替换文件"}
                         </Button>
                       </Upload>
                     </div>
@@ -666,9 +666,9 @@ export default function MediaPage() {
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} lg={12}>
-          <Card title={`Orphaned uploads (${orphanedCount})`} extra={<Text type="secondary">{orphanedReferencedCount} still referenced</Text>}>
+          <Card title={`孤立上传文件（${orphanedCount}）`} extra={<Text type="secondary">仍有 {orphanedReferencedCount} 个被引用</Text>}>
             {audit.orphanedFiles.length === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No orphaned uploads found." />
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="未发现孤立上传文件。" />
             ) : (
               <Space direction="vertical" size={12} style={{ width: "100%" }}>
                 {audit.orphanedFiles.map((file) => (
@@ -677,17 +677,17 @@ export default function MediaPage() {
                       <div style={{ minWidth: 0, flex: "1 1 240px" }}>
                         <div style={{ fontWeight: 600, wordBreak: "break-all", marginBottom: 6 }}>{file.filepath}</div>
                         <Space size={[4, 4]} wrap>
-                          <Tag color={file.usage.isUsed ? "blue" : "default"} style={{ marginInlineEnd: 0 }}>{file.usage.isUsed ? `${file.usage.count} references` : "Unused"}</Tag>
+                          <Tag color={file.usage.isUsed ? "blue" : "default"} style={{ marginInlineEnd: 0 }}>{file.usage.isUsed ? `${file.usage.count} 个引用` : "未使用"}</Tag>
                           <Tag style={{ marginInlineEnd: 0 }}>{formatFileSize(file.size)}</Tag>
-                          <Tag style={{ marginInlineEnd: 0 }}>Updated {formatDate(file.updatedAt)}</Tag>
+                          <Tag style={{ marginInlineEnd: 0 }}>更新于 {formatDate(file.updatedAt)}</Tag>
                         </Space>
                       </div>
                       <Space wrap>
-                        <Button size="small" icon={<CopyOutlined />} onClick={() => void handleCopyUrl(file.filepath)}>Copy URL</Button>
-                        <Popover content={renderUsageDetails(file.usage)} title={file.usage.isUsed ? "Usage details" : "Usage status"} trigger="click">
-                          <Button size="small" icon={<InfoCircleOutlined />}>Details</Button>
+                        <Button size="small" icon={<CopyOutlined />} onClick={() => void handleCopyUrl(file.filepath)}>复制链接</Button>
+                        <Popover content={renderUsageDetails(file.usage)} title={file.usage.isUsed ? "引用详情" : "引用状态"} trigger="click">
+                          <Button size="small" icon={<InfoCircleOutlined />}>详情</Button>
                         </Popover>
-                        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteOrphan(file)}>Delete</Button>
+                        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteOrphan(file)}>删除</Button>
                       </Space>
                     </div>
                   </div>
@@ -697,9 +697,9 @@ export default function MediaPage() {
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title={`Broken references (${brokenReferenceCount})`} extra={<Text type="secondary">Referenced but missing everywhere</Text>}>
+          <Card title={`损坏引用（${brokenReferenceCount}）`} extra={<Text type="secondary">已被引用，但存储中不存在</Text>}>
             {audit.brokenReferences.length === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No broken references found." />
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="未发现损坏引用。" />
             ) : (
               <Space direction="vertical" size={12} style={{ width: "100%" }}>
                 {audit.brokenReferences.map((reference) => (
@@ -707,12 +707,12 @@ export default function MediaPage() {
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                       <div style={{ minWidth: 0, flex: "1 1 240px" }}>
                         <div style={{ fontWeight: 600, wordBreak: "break-all", marginBottom: 6 }}>{reference.filepath}</div>
-                        <Text type="secondary">{reference.usage.count} reference{reference.usage.count === 1 ? "" : "s"} need attention</Text>
+                        <Text type="secondary">{reference.usage.count} 个引用待处理</Text>
                       </div>
                       <Space wrap>
-                        <Button size="small" icon={<CopyOutlined />} onClick={() => void handleCopyUrl(reference.filepath)}>Copy URL</Button>
-                        <Popover content={renderUsageDetails(reference.usage)} title="Broken reference details" trigger="click">
-                          <Button size="small" icon={<InfoCircleOutlined />}>Details</Button>
+                        <Button size="small" icon={<CopyOutlined />} onClick={() => void handleCopyUrl(reference.filepath)}>复制链接</Button>
+                        <Popover content={renderUsageDetails(reference.usage)} title="损坏引用详情" trigger="click">
+                          <Button size="small" icon={<InfoCircleOutlined />}>详情</Button>
                         </Popover>
                       </Space>
                     </div>
@@ -724,20 +724,20 @@ export default function MediaPage() {
         </Col>
       </Row>
 
-      <Modal title="Edit media details" open={editModalVisible} onOk={() => void handleEditSubmit()} onCancel={() => setEditModalVisible(false)} okText="Save" cancelText="Cancel">
+      <Modal title="编辑媒体信息" open={editModalVisible} onOk={() => void handleEditSubmit()} onCancel={() => setEditModalVisible(false)} okText="保存" cancelText="取消">
         <div style={{ marginBottom: 16 }}>
-          <label htmlFor="media-title" style={{ display: "block", marginBottom: 8 }}>Title</label>
-          <Input id="media-title" placeholder="Optional title" value={editTitle} onChange={(event) => setEditTitle(event.target.value)} />
+          <label htmlFor="media-title" style={{ display: "block", marginBottom: 8 }}>标题</label>
+          <Input id="media-title" placeholder="可选标题" value={editTitle} onChange={(event) => setEditTitle(event.target.value)} />
         </div>
         <div>
-          <label htmlFor="media-alt" style={{ display: "block", marginBottom: 8 }}>Alt text</label>
-          <Input id="media-alt" placeholder="Describe the image for accessibility" value={editAlt} onChange={(event) => setEditAlt(event.target.value)} />
+          <label htmlFor="media-alt" style={{ display: "block", marginBottom: 8 }}>替代文本</label>
+          <Input id="media-alt" placeholder="为无障碍访问描述这张图片" value={editAlt} onChange={(event) => setEditAlt(event.target.value)} />
         </div>
       </Modal>
 
       <Modal open={previewVisible} footer={null} onCancel={() => setPreviewVisible(false)} width={800}>
         <div style={{ position: "relative", width: "100%", height: 520, marginTop: 20 }}>
-          <NextImage src={previewImage} alt="preview" fill sizes="(max-width: 800px) 100vw, 800px" style={{ objectFit: "contain" }} />
+          <NextImage src={previewImage} alt="预览图" fill sizes="(max-width: 800px) 100vw, 800px" style={{ objectFit: "contain" }} />
         </div>
       </Modal>
     </div>

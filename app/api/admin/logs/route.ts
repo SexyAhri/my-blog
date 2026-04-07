@@ -52,7 +52,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Failed to fetch logs:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch logs" },
+      { success: false, error: "获取日志失败" },
       { status: 500 },
     );
   }

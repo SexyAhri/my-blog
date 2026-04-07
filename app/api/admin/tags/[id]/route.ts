@@ -20,7 +20,7 @@ export async function PUT(
 
     if (!name || !slug) {
       return NextResponse.json(
-        { success: false, error: "Name and slug are required" },
+        { success: false, error: "名称和别名不能为空" },
         { status: 400 },
       );
     }
@@ -35,7 +35,7 @@ export async function PUT(
 
     if (existing) {
       return NextResponse.json(
-        { success: false, error: "Slug already exists" },
+        { success: false, error: "别名已存在" },
         { status: 400 },
       );
     }
@@ -53,13 +53,13 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       data: tag,
-      message: "Tag updated",
+      message: "标签已更新",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to update tag",
+        error: error instanceof Error ? error.message : "更新标签失败",
       },
       { status: 500 },
     );
@@ -85,7 +85,7 @@ export async function DELETE(
       return NextResponse.json(
         {
           success: false,
-          error: `Tag is still used by ${postsCount} posts`,
+          error: `该标签仍被 ${postsCount} 篇文章使用`,
         },
         { status: 400 },
       );
@@ -99,13 +99,13 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: "Tag deleted",
+      message: "标签已删除",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to delete tag",
+        error: error instanceof Error ? error.message : "删除标签失败",
       },
       { status: 500 },
     );

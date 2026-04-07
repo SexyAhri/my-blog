@@ -20,7 +20,7 @@ export async function GET() {
     return NextResponse.json({ success: true, data: series });
   } catch {
     return NextResponse.json(
-      { success: false, error: "Failed to fetch series" },
+      { success: false, error: "获取系列失败" },
       { status: 500 },
     );
   }
@@ -55,13 +55,13 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     if ((error as { code?: string })?.code === "P2002") {
       return NextResponse.json(
-        { success: false, error: "Series name or slug already exists" },
+        { success: false, error: "系列名称或别名已存在" },
         { status: 400 },
       );
     }
 
     return NextResponse.json(
-      { success: false, error: "Failed to create series" },
+      { success: false, error: "创建系列失败" },
       { status: 500 },
     );
   }

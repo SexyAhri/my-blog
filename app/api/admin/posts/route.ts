@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch posts",
+        error: error instanceof Error ? error.message : "获取文章失败",
       },
       { status: 500 },
     );
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       return NextResponse.json(
-        { success: false, error: "Slug already exists" },
+        { success: false, error: "别名已存在" },
         { status: 400 },
       );
     }
@@ -139,14 +139,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: post,
-      message: input.isScheduled ? "Post scheduled" : "Post created",
+      message: input.isScheduled ? "文章已定时发布" : "文章已创建",
     });
   } catch (error) {
     console.error("Create post error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to create post",
+        error: error instanceof Error ? error.message : "创建文章失败",
       },
       { status: 500 },
     );

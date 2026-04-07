@@ -70,12 +70,12 @@ export default function ImagePicker({
       } else {
         setMedia([]);
         setFilteredMedia([]);
-        message.error(data.error || "Failed to load images");
+        message.error(data.error || "加载图片失败");
       }
     } catch {
       setMedia([]);
       setFilteredMedia([]);
-      message.error("Failed to load images");
+      message.error("加载图片失败");
     } finally {
       setLoading(false);
     }
@@ -122,13 +122,13 @@ export default function ImagePicker({
       };
 
       if (data.success) {
-        message.success("Upload completed");
+        message.success("上传成功");
         await loadMedia();
       } else {
-        message.error(data.error || "Upload failed");
+        message.error(data.error || "上传失败");
       }
     } catch {
-      message.error("Upload failed");
+      message.error("上传失败");
     } finally {
       setUploading(false);
     }
@@ -159,19 +159,19 @@ export default function ImagePicker({
 
   return (
     <Modal
-      title="Select Image"
+      title="选择图片"
       open={open}
       onCancel={onClose}
       onOk={handleSelect}
-      okText="Use Image"
-      cancelText="Cancel"
+      okText="使用图片"
+      cancelText="取消"
       width={900}
       okButtonProps={{ disabled: !selectedImage }}
     >
       <div style={{ marginBottom: 16 }}>
         <Space style={{ width: "100%", justifyContent: "space-between" }}>
           <Input
-            placeholder="Search images..."
+            placeholder="搜索图片..."
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
@@ -179,7 +179,7 @@ export default function ImagePicker({
           />
           <Upload beforeUpload={handleUpload} showUploadList={false} accept="image/*">
             <Button type="primary" icon={<UploadOutlined />} loading={uploading}>
-              Upload Image
+              上传图片
             </Button>
           </Upload>
         </Space>
@@ -190,7 +190,7 @@ export default function ImagePicker({
           <Spin size="large" />
         </div>
       ) : filteredMedia.length === 0 ? (
-        <Empty description="No images found." style={{ padding: 50 }} />
+        <Empty description="未找到图片。" style={{ padding: 50 }} />
       ) : (
         <div style={{ maxHeight: 500, overflowY: "auto" }}>
           <Row gutter={[16, 16]}>

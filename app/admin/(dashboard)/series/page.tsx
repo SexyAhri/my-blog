@@ -76,7 +76,7 @@ export default function SeriesPage() {
         setSeries(data.data);
       }
     } catch {
-      message.error("Failed to load series");
+      message.error("加载系列失败");
     } finally {
       setLoading(false);
     }
@@ -105,27 +105,26 @@ export default function SeriesPage() {
       const data = (await res.json()) as { success: boolean; error?: string };
 
       if (data.success) {
-        message.success(editingSeries ? "Series updated" : "Series created");
+        message.success(editingSeries ? "系列已更新" : "系列已创建");
         setModalVisible(false);
         setCoverPickerOpen(false);
         form.resetFields();
         setEditingSeries(null);
         await loadSeries();
       } else {
-        message.error(data.error || "Operation failed");
+        message.error(data.error || "操作失败");
       }
     } catch {
-      message.error("Operation failed");
+      message.error("操作失败");
     }
   };
 
   const handleDelete = (id: string) => {
     modal.confirm({
-      title: "Delete series",
-      content:
-        "Articles in this series will no longer belong to any series. Continue?",
-      okText: "Delete",
-      cancelText: "Cancel",
+      title: "删除系列",
+      content: "删除后，该系列下的文章将不再属于任何系列，确定继续吗？",
+      okText: "删除",
+      cancelText: "取消",
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
@@ -138,13 +137,13 @@ export default function SeriesPage() {
           };
 
           if (data.success) {
-            message.success("Series deleted");
+            message.success("系列已删除");
             await loadSeries();
           } else {
-            message.error(data.error || "Failed to delete series");
+            message.error(data.error || "删除系列失败");
           }
         } catch {
-          message.error("Failed to delete series");
+          message.error("删除系列失败");
         }
       },
     });
@@ -171,13 +170,13 @@ export default function SeriesPage() {
 
   const columns: ColumnsType<Series> = [
     {
-      title: "Name",
+      title: "名称",
       dataIndex: "name",
       key: "name",
       render: (text: string) => <strong>{text}</strong>,
     },
     {
-      title: "Cover",
+      title: "封面",
       dataIndex: "coverImage",
       key: "coverImage",
       width: 92,
@@ -185,49 +184,49 @@ export default function SeriesPage() {
         coverImage ? (
           <Image
             src={coverImage}
-            alt="Series cover"
+            alt="系列封面"
             width={64}
             height={40}
             style={{ objectFit: "cover", borderRadius: 8 }}
             preview={false}
           />
         ) : (
-          <span style={{ color: "#999" }}>No cover</span>
+          <span style={{ color: "#999" }}>无封面</span>
         ),
     },
     {
-      title: "Slug",
+      title: "别名",
       dataIndex: "slug",
       key: "slug",
       render: (text: string) => <code>{text}</code>,
     },
     {
-      title: "Posts",
+      title: "文章数",
       key: "postCount",
       render: (_value: unknown, record: Series) => (
         <Tag color="blue">{record._count.posts}</Tag>
       ),
     },
     {
-      title: "Description",
+      title: "描述",
       dataIndex: "description",
       key: "description",
       ellipsis: true,
       render: (text?: string) => text || <span style={{ color: "#999" }}>-</span>,
     },
     {
-      title: "Created At",
+      title: "创建时间",
       dataIndex: "createdAt",
       key: "createdAt",
       render: (date: string) => new Date(date).toLocaleDateString("zh-CN"),
     },
     {
-      title: "Actions",
+      title: "操作",
       key: "action",
       render: (_value: unknown, record: Series) => (
         <Space size="small">
           <Button type="link" size="small" onClick={() => openModal(record)}>
-            Edit
+            编辑
           </Button>
           <Button
             type="link"
@@ -235,7 +234,7 @@ export default function SeriesPage() {
             danger
             onClick={() => handleDelete(record.id)}
           >
-            Delete
+            删除
           </Button>
         </Space>
       ),
@@ -247,7 +246,7 @@ export default function SeriesPage() {
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={8}>
           <MetricCard
-            title="Series"
+            title="系列数"
             value={series.length}
             icon={<BookOutlined />}
             color="#722ed1"
@@ -255,7 +254,7 @@ export default function SeriesPage() {
         </Col>
         <Col xs={24} sm={8}>
           <MetricCard
-            title="Total Posts"
+            title="文章总数"
             value={totalPosts}
             icon={<BookOutlined />}
             color="#1890ff"
@@ -263,7 +262,7 @@ export default function SeriesPage() {
         </Col>
         <Col xs={24} sm={8}>
           <MetricCard
-            title="Average Posts"
+            title="平均文章数"
             value={series.length > 0 ? (totalPosts / series.length).toFixed(1) : 0}
             icon={<BookOutlined />}
             color="#52c41a"
@@ -272,14 +271,14 @@ export default function SeriesPage() {
       </Row>
 
       <DataTable<Series>
-        cardTitle="Series List"
+        cardTitle="系列列表"
         cardExtra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => void loadSeries()}>
-              Refresh
+              刷新
             </Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
-              New Series
+              新建系列
             </Button>
           </Space>
         }
@@ -291,7 +290,7 @@ export default function SeriesPage() {
       />
 
       <Modal
-        title={editingSeries ? "Edit Series" : "New Series"}
+        title={editingSeries ? "编辑系列" : "新建系列"}
         open={modalVisible}
         onCancel={() => {
           setModalVisible(false);
@@ -300,19 +299,19 @@ export default function SeriesPage() {
           setEditingSeries(null);
         }}
         onOk={() => form.submit()}
-        okText="Save"
-        cancelText="Cancel"
+        okText="保存"
+        cancelText="取消"
       >
         <Form<SeriesFormValues> form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
             name="name"
-            label="Series Name"
+            label="系列名称"
             rules={[
-              createRequiredTrimmedRule("Series name", SERIES_LIMITS.name),
+              createRequiredTrimmedRule("系列名称", SERIES_LIMITS.name),
             ]}
           >
             <Input
-              placeholder="For example: React Basics"
+              placeholder="例如：React 基础"
               maxLength={SERIES_LIMITS.name}
               showCount
               onChange={(event) => {
@@ -324,8 +323,8 @@ export default function SeriesPage() {
           </Form.Item>
           <Form.Item
             name="slug"
-            label="Slug"
-            rules={[createSlugRule("Series slug")]}
+            label="别名"
+            rules={[createSlugRule("系列别名")]}
           >
             <Input
               placeholder="react-basics"
@@ -339,16 +338,16 @@ export default function SeriesPage() {
           </Form.Item>
           <Form.Item
             name="coverImage"
-            label="Cover Image"
+            label="封面图"
             rules={[
               createOptionalImageSourceRule(
-                "Series cover image",
+                "系列封面图",
                 SERIES_LIMITS.coverImage,
               ),
             ]}
           >
             <Input
-              placeholder="Select or paste an image URL"
+              placeholder="选择图片或粘贴图片地址"
               maxLength={SERIES_LIMITS.coverImage}
               addonAfter={
                 <Button
@@ -357,7 +356,7 @@ export default function SeriesPage() {
                   icon={<PictureOutlined />}
                   onClick={() => setCoverPickerOpen(true)}
                 >
-                  Choose
+                  选择
                 </Button>
               }
             />
@@ -378,7 +377,7 @@ export default function SeriesPage() {
                 <div style={{ marginBottom: 16 }}>
                   <Image
                     src={coverImage}
-                    alt="Series cover preview"
+                    alt="系列封面预览"
                     style={{
                       width: "100%",
                       maxHeight: 180,
@@ -392,17 +391,17 @@ export default function SeriesPage() {
           </Form.Item>
           <Form.Item
             name="description"
-            label="Description"
+            label="描述"
             rules={[
               createOptionalTrimmedRule(
-                "Series description",
+                "系列描述",
                 SERIES_LIMITS.description,
               ),
             ]}
           >
             <TextArea
               rows={3}
-              placeholder="Optional description"
+              placeholder="可选描述"
               maxLength={SERIES_LIMITS.description}
               showCount
             />

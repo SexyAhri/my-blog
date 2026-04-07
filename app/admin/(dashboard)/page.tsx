@@ -108,7 +108,7 @@ export default function DashboardPage() {
 
   const columns: ColumnsType<DashboardPost> = [
     {
-      title: "Title",
+      title: "标题",
       dataIndex: "title",
       key: "title",
       render: (text, record) => (
@@ -118,32 +118,32 @@ export default function DashboardPage() {
       ),
     },
     {
-      title: "Category",
+      title: "分类",
       dataIndex: ["category", "name"],
       key: "category",
       width: 140,
       render: (text?: string) =>
-        text || <span style={{ color: "#999" }}>Uncategorized</span>,
+        text || <span style={{ color: "#999" }}>未分类</span>,
     },
     {
-      title: "Status",
+      title: "状态",
       dataIndex: "published",
       key: "published",
       width: 110,
       render: (published: boolean) => (
         <Tag color={published ? "success" : "warning"} style={{ margin: 0 }}>
-          {published ? "Published" : "Draft"}
+          {published ? "已发布" : "草稿"}
         </Tag>
       ),
     },
     {
-      title: "Views",
+      title: "浏览量",
       dataIndex: "viewCount",
       key: "viewCount",
       width: 100,
     },
     {
-      title: "Created",
+      title: "创建时间",
       dataIndex: "createdAt",
       key: "createdAt",
       width: 140,
@@ -169,7 +169,7 @@ export default function DashboardPage() {
       <Row gutter={12}>
         <Col xs={12} lg={5}>
           <MetricCard
-            title="Posts"
+            title="文章总数"
             value={stats.postCount}
             icon={<FileTextOutlined />}
             color="#1890ff"
@@ -177,7 +177,7 @@ export default function DashboardPage() {
         </Col>
         <Col xs={12} lg={5}>
           <MetricCard
-            title="Published"
+            title="已发布"
             value={stats.publishedCount}
             icon={<CheckCircleOutlined />}
             color="#52c41a"
@@ -185,7 +185,7 @@ export default function DashboardPage() {
         </Col>
         <Col xs={12} lg={5}>
           <MetricCard
-            title="Categories"
+            title="分类数"
             value={stats.categoryCount}
             icon={<FolderOutlined />}
             color="#1890ff"
@@ -193,7 +193,7 @@ export default function DashboardPage() {
         </Col>
         <Col xs={12} lg={5}>
           <MetricCard
-            title="Tags"
+            title="标签数"
             value={stats.tagCount}
             icon={<TagOutlined />}
             color="#faad14"
@@ -204,22 +204,22 @@ export default function DashboardPage() {
             <Space direction="vertical" style={{ width: "100%" }} size={6}>
               <Link href="/admin/posts/new">
                 <Button type="primary" block size="small" icon={<PlusOutlined />}>
-                  New Post
+                  写文章
                 </Button>
               </Link>
               <Link href="/admin/media">
                 <Button block size="small" icon={<PictureOutlined />}>
-                  Media Library
+                  媒体库
                 </Button>
               </Link>
               <Link href="/admin/categories">
                 <Button block size="small" icon={<FolderOutlined />}>
-                  Categories
+                  分类
                 </Button>
               </Link>
               <Link href="/admin/tags">
                 <Button block size="small" icon={<TagOutlined />}>
-                  Tags
+                  标签
                 </Button>
               </Link>
             </Space>
@@ -228,13 +228,13 @@ export default function DashboardPage() {
       </Row>
 
       <Card
-        title="Recent Posts"
+        title="最近文章"
         size="small"
         style={{ marginTop: 12 }}
         extra={
           <Link href="/admin/posts">
             <Button type="link" size="small">
-              View all
+              查看全部
             </Button>
           </Link>
         }
@@ -245,10 +245,10 @@ export default function DashboardPage() {
             <FileTextOutlined
               style={{ fontSize: 36, color: "#d9d9d9", marginBottom: 12 }}
             />
-            <p style={{ color: "#999", marginBottom: 12 }}>No posts yet.</p>
+            <p style={{ color: "#999", marginBottom: 12 }}>还没有文章。</p>
             <Link href="/admin/posts/new">
               <Button type="primary" size="small">
-                Create your first post
+                创建第一篇文章
               </Button>
             </Link>
           </div>

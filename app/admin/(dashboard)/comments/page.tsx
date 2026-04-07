@@ -52,11 +52,11 @@ export default function CommentsPage() {
           setComments(data.data);
         } else {
           setComments([]);
-          message.error(data.error || "Failed to load comments");
+          message.error(data.error || "加载评论失败");
         }
       } catch {
         setComments([]);
-        message.error("Failed to load comments");
+        message.error("加载评论失败");
       } finally {
         setLoading(false);
       }
@@ -78,22 +78,22 @@ export default function CommentsPage() {
       const data = (await res.json()) as MutationResponse;
 
       if (data.success) {
-        message.success(approved ? "Comment approved" : "Comment moved back to pending");
+        message.success(approved ? "评论已通过" : "评论已移回待审核");
         await loadComments(activeTab);
       } else {
-        message.error(data.error || "Action failed");
+        message.error(data.error || "操作失败");
       }
     } catch {
-      message.error("Action failed");
+      message.error("操作失败");
     }
   };
 
   const handleDelete = (id: string) => {
     modal.confirm({
-      title: "Delete comment",
-      content: "This action cannot be undone. Continue?",
-      okText: "Delete",
-      cancelText: "Cancel",
+      title: "删除评论",
+      content: "删除后无法恢复，确定继续吗？",
+      okText: "删除",
+      cancelText: "取消",
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
@@ -103,13 +103,13 @@ export default function CommentsPage() {
           const data = (await res.json()) as MutationResponse;
 
           if (data.success) {
-            message.success("Comment deleted");
+            message.success("评论已删除");
             await loadComments(activeTab);
           } else {
-            message.error(data.error || "Delete failed");
+            message.error(data.error || "删除失败");
           }
         } catch {
-          message.error("Delete failed");
+          message.error("删除失败");
         }
       },
     });
@@ -117,7 +117,7 @@ export default function CommentsPage() {
 
   const columns: ColumnsType<CommentRecord> = [
     {
-      title: "Comment",
+      title: "评论内容",
       dataIndex: "content",
       key: "content",
       ellipsis: true,
@@ -130,33 +130,34 @@ export default function CommentsPage() {
       ),
     },
     {
-      title: "Post",
+      title: "所属文章",
       dataIndex: ["post", "title"],
       key: "post",
       width: 240,
       ellipsis: true,
-      render: (text?: string) => text || <span style={{ color: "#999" }}>Unknown</span>,
+      render: (text?: string) =>
+        text || <span style={{ color: "#999" }}>未知文章</span>,
     },
     {
-      title: "Status",
+      title: "状态",
       dataIndex: "approved",
       key: "approved",
       width: 110,
       render: (approved: boolean) => (
         <Tag color={approved ? "success" : "warning"}>
-          {approved ? "Approved" : "Pending"}
+          {approved ? "已通过" : "待审核"}
         </Tag>
       ),
     },
     {
-      title: "Created",
+      title: "提交时间",
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
       render: (date: string) => new Date(date).toLocaleString("zh-CN"),
     },
     {
-      title: "Actions",
+      title: "操作",
       key: "action",
       width: 180,
       render: (_value, record) => (
@@ -168,7 +169,7 @@ export default function CommentsPage() {
               icon={<CheckOutlined />}
               onClick={() => void handleApprove(record.id, true)}
             >
-              Approve
+              通过
             </Button>
           )}
           {record.approved && (
@@ -178,7 +179,7 @@ export default function CommentsPage() {
               icon={<CloseOutlined />}
               onClick={() => void handleApprove(record.id, false)}
             >
-              Revoke
+              撤回
             </Button>
           )}
           <Button
@@ -188,7 +189,7 @@ export default function CommentsPage() {
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record.id)}
           >
-            Delete
+            删除
           </Button>
         </Space>
       ),
@@ -205,12 +206,12 @@ export default function CommentsPage() {
             key: "pending",
             label: (
               <span>
-                <MessageOutlined /> Pending
+                <MessageOutlined /> 待审核
               </span>
             ),
           },
-          { key: "approved", label: "Approved" },
-          { key: "all", label: "All" },
+          { key: "approved", label: "已通过" },
+          { key: "all", label: "全部" },
         ]}
       />
       <Table

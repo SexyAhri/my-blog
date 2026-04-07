@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   GithubOutlined,
@@ -8,13 +5,7 @@ import {
   TwitterOutlined,
   WeiboOutlined,
 } from "@ant-design/icons";
-
-interface SocialLinks {
-  github?: string;
-  twitter?: string;
-  weibo?: string;
-  email?: string;
-}
+import { getPublicSiteSettings } from "@/lib/public-settings";
 
 const FOOTER_LINKS = [
   { href: "/", label: "Home" },
@@ -25,35 +16,23 @@ const FOOTER_LINKS = [
   { href: "/feed.xml", label: "RSS" },
 ];
 
-export default function BlogFooter() {
+export default async function BlogFooter() {
   const currentYear = new Date().getFullYear();
-  const [social, setSocial] = useState<SocialLinks>({});
-  const [icp, setIcp] = useState("");
-
-  useEffect(() => {
-    fetch("/api/settings/footer")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setSocial({
-            github: data.socialGithub,
-            twitter: data.socialTwitter,
-            weibo: data.socialWeibo,
-            email: data.socialEmail,
-          });
-          setIcp(data.siteIcp || "");
-        }
-      })
-      .catch(console.error);
-  }, []);
+  const {
+    socialGithub,
+    socialTwitter,
+    socialWeibo,
+    socialEmail,
+    siteIcp,
+  } = await getPublicSiteSettings();
 
   return (
     <footer className="blog-footer">
       <div className="blog-footer-container">
         <div className="blog-footer-content">
           <div className="blog-footer-section">
-            <p>© {currentYear} VixenAhri</p>
-            {icp && (
+            <p>&copy; {currentYear} VixenAhri</p>
+            {siteIcp && (
               <p style={{ fontSize: 12, marginTop: 4 }}>
                 <a
                   href="https://beian.miit.gov.cn/"
@@ -61,7 +40,7 @@ export default function BlogFooter() {
                   rel="noopener noreferrer"
                   style={{ color: "#999" }}
                 >
-                  {icp}
+                  {siteIcp}
                 </a>
               </p>
             )}
@@ -79,9 +58,9 @@ export default function BlogFooter() {
 
           <div className="blog-footer-section">
             <div className="blog-footer-social">
-              {social.github && (
+              {socialGithub && (
                 <a
-                  href={social.github}
+                  href={socialGithub}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="GitHub"
@@ -89,9 +68,9 @@ export default function BlogFooter() {
                   <GithubOutlined />
                 </a>
               )}
-              {social.twitter && (
+              {socialTwitter && (
                 <a
-                  href={social.twitter}
+                  href={socialTwitter}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Twitter"
@@ -99,9 +78,9 @@ export default function BlogFooter() {
                   <TwitterOutlined />
                 </a>
               )}
-              {social.weibo && (
+              {socialWeibo && (
                 <a
-                  href={social.weibo}
+                  href={socialWeibo}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Weibo"
@@ -109,8 +88,8 @@ export default function BlogFooter() {
                   <WeiboOutlined />
                 </a>
               )}
-              {social.email && (
-                <a href={`mailto:${social.email}`} aria-label="Email">
+              {socialEmail && (
+                <a href={`mailto:${socialEmail}`} aria-label="Email">
                   <MailOutlined />
                 </a>
               )}

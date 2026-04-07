@@ -11,7 +11,7 @@ body {
     padding: 0;
 }
 
-/* 统一滚动条样式 */
+/* Unified scrollbar styles */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -33,7 +33,7 @@ body {
     background-clip: content-box;
 }
 
-/* 暗色模式滚动条 */
+/* Dark mode scrollbar */
 [data-theme="dark"] ::-webkit-scrollbar-thumb,
 .ant-layout-sider-dark ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.15);
@@ -44,7 +44,7 @@ body {
     background: rgba(255, 255, 255, 0.25);
 }
 
-/* 主题切换圆形扩散动画 */
+/* Theme transition circle animation */
 ::view-transition-old(root),
 ::view-transition-new(root) {
     animation: none;
@@ -70,7 +70,7 @@ body {
     }
 }
 
-/* 涟漪波纹动画 */
+/* Ripple wave animation */
 @keyframes ripple-wave {
     0% {
         width: 0;
@@ -85,7 +85,7 @@ body {
     }
 }
 
-/* 页面内容滑入动画 */
+/* Page content slide-in animation */
 @keyframes slideIn {
     from {
         opacity: 0;
@@ -102,7 +102,7 @@ body {
     animation: slideIn 0.3s ease-out forwards;
 }
 
-/* 卡片依次出现动画 */
+/* Card stagger entrance animation */
 .page-content .ant-card {
     opacity: 0;
     animation: slideIn 0.4s ease-out forwards;
@@ -128,7 +128,7 @@ body {
     animation-delay: 0.25s;
 }
 
-/* 侧边栏菜单样式 */
+/* Sidebar menu styles */
 .ant-menu-dark {
     background: transparent !important;
 }
@@ -141,12 +141,12 @@ body {
     background: rgba(255, 255, 255, 0.06) !important;
 }
 
-/* 菜单项过渡 */
+/* Menu item transition */
 .ant-menu-item {
     transition: all 0.2s ease !important;
 }
 
-/* 统计卡片样式 */
+/* Statistic card styles */
 .stat-card .ant-statistic-title {
     font-size: 14px;
 }
@@ -155,12 +155,12 @@ body {
     font-size: 28px;
 }
 
-/* 统一卡片内边距 */
+/* Unified small card padding */
 .ant-card-small>.ant-card-body {
     padding: 12px 16px;
 }
 
-/* 卡片悬浮效果 */
+/* Card hover lift */
 .ant-card {
     transition:
         transform 0.2s ease,
@@ -171,17 +171,17 @@ body {
     transform: translateY(-2px);
 }
 
-/* 按钮过渡 */
+/* Button transition */
 .ant-btn {
     transition: all 0.2s ease !important;
 }
 
-/* 表格行过渡 */
+/* Table row transition */
 .ant-table-tbody>tr {
     transition: background 0.15s ease;
 }
 
-/* 浮动动画 */
+/* Floating animation */
 @keyframes float {
 
     0%,
@@ -198,7 +198,7 @@ body {
     animation: float 3s ease-in-out infinite;
 }
 
-/* 发光动画 */
+/* Glow animation */
 @keyframes glow {
 
     0%,
@@ -215,7 +215,7 @@ body {
     animation: glow 2s ease-in-out infinite;
 }
 
-/* 闪光动画 */
+/* Shimmer animation */
 @keyframes shimmer {
     0% {
         background-position: -200% 0;

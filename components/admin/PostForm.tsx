@@ -118,7 +118,7 @@ interface PreviewPostData {
   viewCount?: number;
 }
 
-const EMPTY_PREVIEW_CONTENT = "<p>No content yet.</p>";
+const EMPTY_PREVIEW_CONTENT = "<p>暂无内容。</p>";
 
 export default function PostForm({ post }: PostFormProps) {
   const router = useRouter();
@@ -297,7 +297,7 @@ export default function PostForm({ post }: PostFormProps) {
       }));
 
     return {
-      title: values.title || "Untitled Draft",
+      title: values.title || "未命名草稿",
       content: content || EMPTY_PREVIEW_CONTENT,
       excerpt: values.excerpt || undefined,
       coverImage: coverImage || undefined,
@@ -307,7 +307,7 @@ export default function PostForm({ post }: PostFormProps) {
           }
         : undefined,
       tags: selectedTags,
-      author: post?.author || { name: "Current User", email: "" },
+      author: post?.author || { name: "当前用户", email: "" },
       createdAt:
         typeof post?.createdAt === "string"
           ? post.createdAt
@@ -320,7 +320,7 @@ export default function PostForm({ post }: PostFormProps) {
     const textContent = content.replace(/<[^>]*>/g, "").trim();
 
     if (!textContent) {
-      message.error("Write some content before saving.");
+      message.error("保存前请先编写内容。");
       return;
     }
 
@@ -339,14 +339,14 @@ export default function PostForm({ post }: PostFormProps) {
       const data = (await res.json()) as MutationResponse;
 
       if (data.success) {
-        message.success(post ? "Post updated" : "Post created");
+        message.success(post ? "文章已更新" : "文章已创建");
         router.push("/admin/posts");
         router.refresh();
       } else {
-        message.error(data.error || "Operation failed");
+        message.error(data.error || "操作失败");
       }
     } catch {
-      message.error("Operation failed");
+      message.error("操作失败");
     } finally {
       setLoading(false);
     }
@@ -361,10 +361,10 @@ export default function PostForm({ post }: PostFormProps) {
             icon={<ArrowLeftOutlined />}
             onClick={() => router.back()}
           >
-            Back
+            返回
           </Button>
           <span className="post-form-title">
-            {post ? "Edit Post" : "New Post"}
+            {post ? "编辑文章" : "新建文章"}
           </span>
           {post && autoSaveStatus !== "idle" && (
             <Tag
@@ -378,7 +378,7 @@ export default function PostForm({ post }: PostFormProps) {
               color={autoSaveStatus === "saving" ? "processing" : "success"}
               style={{ marginLeft: 8 }}
             >
-              {autoSaveStatus === "saving" ? "Saving..." : "Saved"}
+              {autoSaveStatus === "saving" ? "保存中..." : "已保存"}
             </Tag>
           )}
         </div>
@@ -387,7 +387,7 @@ export default function PostForm({ post }: PostFormProps) {
             icon={<EyeOutlined />}
             onClick={() => setPreviewVisible(true)}
           >
-            Preview
+            预览
           </Button>
           <Button
             type="primary"
@@ -395,7 +395,7 @@ export default function PostForm({ post }: PostFormProps) {
             loading={loading}
             onClick={() => form.submit()}
           >
-            {post ? "Update" : "Publish"}
+            {post ? "更新" : "发布"}
           </Button>
         </Space>
       </div>
@@ -416,11 +416,11 @@ export default function PostForm({ post }: PostFormProps) {
           <div className="post-form-main">
             <Form.Item
               name="title"
-              rules={[{ required: true, message: "Enter a post title" }]}
+              rules={[{ required: true, message: "请输入文章标题" }]}
               style={{ marginBottom: 12 }}
             >
               <Input
-                placeholder="Post title"
+                placeholder="文章标题"
                 size="large"
                 variant="borderless"
                 style={{ fontSize: 24, fontWeight: 600, padding: 0 }}
@@ -439,17 +439,17 @@ export default function PostForm({ post }: PostFormProps) {
 
           <div className="post-form-sidebar">
             <div className="post-form-section">
-              <div className="post-form-section-title">Publishing</div>
+              <div className="post-form-section-title">发布设置</div>
               <Form.Item
-                label="Slug"
+                label="别名"
                 name="slug"
-                rules={[{ required: true, message: "Enter a slug" }]}
+                rules={[{ required: true, message: "请输入别名" }]}
               >
-                <Input placeholder="my-blog-post" />
+                <Input placeholder="例如：my-blog-post" />
               </Form.Item>
-              <Form.Item label="Category" name="categoryId">
+              <Form.Item label="分类" name="categoryId">
                 <Select
-                  placeholder="Choose a category"
+                  placeholder="选择分类"
                   allowClear
                   options={categories.map((category) => ({
                     label: category.name,
@@ -457,10 +457,10 @@ export default function PostForm({ post }: PostFormProps) {
                   }))}
                 />
               </Form.Item>
-              <Form.Item label="Tags" name="tagIds">
+              <Form.Item label="标签" name="tagIds">
                 <Select
                   mode="multiple"
-                  placeholder="Choose tags"
+                  placeholder="选择标签"
                   options={tags.map((tag) => ({
                     label: tag.name,
                     value: tag.id,
@@ -468,11 +468,11 @@ export default function PostForm({ post }: PostFormProps) {
                 />
               </Form.Item>
               <Form.Item
-                label="Published"
+                label="立即发布"
                 name="published"
                 valuePropName="checked"
               >
-                <Switch checkedChildren="Yes" unCheckedChildren="No" />
+                <Switch checkedChildren="是" unCheckedChildren="否" />
               </Form.Item>
 
               <div style={{ marginBottom: 16 }}>
@@ -485,7 +485,7 @@ export default function PostForm({ post }: PostFormProps) {
                   }}
                 >
                   <ClockCircleOutlined />
-                  <span>Schedule Publish</span>
+                  <span>定时发布</span>
                   <Switch
                     size="small"
                     checked={showSchedule}
@@ -501,7 +501,7 @@ export default function PostForm({ post }: PostFormProps) {
                   <Form.Item name="scheduledAt" style={{ marginBottom: 0 }}>
                     <DatePicker
                       showTime
-                      placeholder="Choose publish time"
+                      placeholder="选择发布时间"
                       style={{ width: "100%" }}
                       disabledDate={(current) =>
                         Boolean(current && current < dayjs().startOf("day"))
@@ -513,10 +513,10 @@ export default function PostForm({ post }: PostFormProps) {
             </div>
 
             <div className="post-form-section">
-              <div className="post-form-section-title">Series</div>
-              <Form.Item label="Series" name="seriesId">
+              <div className="post-form-section-title">系列</div>
+              <Form.Item label="所属系列" name="seriesId">
                 <Select
-                  placeholder="Choose a series"
+                  placeholder="选择系列"
                   allowClear
                   options={series.map((item) => ({
                     label: item.name,
@@ -524,17 +524,17 @@ export default function PostForm({ post }: PostFormProps) {
                   }))}
                 />
               </Form.Item>
-              <Form.Item label="Series Order" name="seriesOrder">
+              <Form.Item label="系列顺序" name="seriesOrder">
                 <InputNumber min={1} style={{ width: "100%" }} />
               </Form.Item>
             </div>
 
             <div className="post-form-section">
-              <div className="post-form-section-title">Excerpt</div>
+              <div className="post-form-section-title">摘要</div>
               <Form.Item name="excerpt" style={{ marginBottom: 0 }}>
                 <TextArea
                   rows={3}
-                  placeholder="Short summary for listings and SEO"
+                  placeholder="用于列表展示和 SEO 的简短摘要"
                   showCount
                   maxLength={200}
                 />
@@ -542,12 +542,12 @@ export default function PostForm({ post }: PostFormProps) {
             </div>
 
             <div className="post-form-section">
-              <div className="post-form-section-title">Cover Image</div>
+              <div className="post-form-section-title">封面图</div>
               {coverImage ? (
                 <div className="post-form-cover">
                   <Image
                     src={coverImage}
-                    alt="Cover"
+                    alt="封面图"
                     style={{ width: "100%", borderRadius: 6 }}
                   />
                   <div className="post-form-cover-actions">
@@ -555,7 +555,7 @@ export default function PostForm({ post }: PostFormProps) {
                       size="small"
                       onClick={() => setImagePickerVisible(true)}
                     >
-                      Replace
+                      更换
                     </Button>
                     <Button
                       size="small"
@@ -571,7 +571,7 @@ export default function PostForm({ post }: PostFormProps) {
                   icon={<PictureOutlined />}
                   onClick={() => setImagePickerVisible(true)}
                 >
-                  Select cover image
+                  选择封面图
                 </Button>
               )}
             </div>

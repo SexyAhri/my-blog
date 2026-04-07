@@ -38,7 +38,7 @@ export async function GET(
 
     if (!post) {
       return NextResponse.json(
-        { success: false, error: "Post not found" },
+        { success: false, error: "文章不存在" },
         { status: 404 },
       );
     }
@@ -51,7 +51,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch post",
+        error: error instanceof Error ? error.message : "获取文章失败",
       },
       { status: 500 },
     );
@@ -89,7 +89,7 @@ export async function PUT(
 
     if (existing) {
       return NextResponse.json(
-        { success: false, error: "Slug already exists" },
+        { success: false, error: "别名已存在" },
         { status: 400 },
       );
     }
@@ -105,7 +105,7 @@ export async function PUT(
 
     if (!currentPost) {
       return NextResponse.json(
-        { success: false, error: "Post not found" },
+        { success: false, error: "文章不存在" },
         { status: 404 },
       );
     }
@@ -172,14 +172,14 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       data: post,
-      message: input.isScheduled ? "Post scheduled" : "Post updated",
+      message: input.isScheduled ? "文章已定时发布" : "文章已更新",
     });
   } catch (error) {
     console.error("Update post error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to update post",
+        error: error instanceof Error ? error.message : "更新文章失败",
       },
       { status: 500 },
     );
@@ -224,13 +224,13 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: "Post deleted",
+      message: "文章已删除",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to delete post",
+        error: error instanceof Error ? error.message : "删除文章失败",
       },
       { status: 500 },
     );

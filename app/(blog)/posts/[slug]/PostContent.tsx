@@ -26,7 +26,9 @@ import "prismjs/components/prism-markdown";
 import "prismjs/components/prism-docker";
 
 import BackToTop from "@/components/blog/BackToTop";
-import CommentSection from "@/components/blog/CommentSection";
+import CommentSection, {
+  type CommentItem,
+} from "@/components/blog/CommentSection";
 import ImageModal from "@/components/blog/ImageModal";
 import PostActions from "@/components/blog/PostActions";
 import PostTableOfContents from "@/components/blog/PostTableOfContents";
@@ -41,6 +43,8 @@ interface PostContentProps {
   renderedContent: string;
   toc: TocItem[];
   readingTime: number;
+  initialComments: CommentItem[];
+  initialCommentsEnabled: boolean;
 }
 
 export default function PostContent({
@@ -48,6 +52,8 @@ export default function PostContent({
   renderedContent,
   toc,
   readingTime,
+  initialComments,
+  initialCommentsEnabled,
 }: PostContentProps) {
   const [viewCount, setViewCount] = useState(post.viewCount);
   const { message } = App.useApp();
@@ -263,7 +269,11 @@ export default function PostContent({
           )}
 
           <Divider />
-          <CommentSection slug={post.slug} />
+          <CommentSection
+            slug={post.slug}
+            initialComments={initialComments}
+            initialEnabled={initialCommentsEnabled}
+          />
         </article>
       </div>
 

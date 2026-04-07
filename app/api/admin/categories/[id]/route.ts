@@ -20,7 +20,7 @@ export async function PUT(
 
     if (!name || !slug) {
       return NextResponse.json(
-        { success: false, error: "Name and slug are required" },
+        { success: false, error: "名称和别名不能为空" },
         { status: 400 },
       );
     }
@@ -35,7 +35,7 @@ export async function PUT(
 
     if (existing) {
       return NextResponse.json(
-        { success: false, error: "Slug already exists" },
+        { success: false, error: "别名已存在" },
         { status: 400 },
       );
     }
@@ -54,14 +54,14 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       data: category,
-      message: "Category updated",
+      message: "分类已更新",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
         error:
-          error instanceof Error ? error.message : "Failed to update category",
+          error instanceof Error ? error.message : "更新分类失败",
       },
       { status: 500 },
     );
@@ -87,7 +87,7 @@ export async function DELETE(
       return NextResponse.json(
         {
           success: false,
-          error: `Category is still used by ${postsCount} posts`,
+          error: `该分类仍被 ${postsCount} 篇文章使用`,
         },
         { status: 400 },
       );
@@ -101,14 +101,14 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: "Category deleted",
+      message: "分类已删除",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
         error:
-          error instanceof Error ? error.message : "Failed to delete category",
+          error instanceof Error ? error.message : "删除分类失败",
       },
       { status: 500 },
     );

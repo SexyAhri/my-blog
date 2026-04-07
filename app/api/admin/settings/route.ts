@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { parseSettingsUpdateInput } from "@/lib/admin-payloads";
+import { invalidatePublicSettingsCache, invalidateSidebarCache } from "@/lib/cache";
 
 export async function GET() {
   try {
@@ -21,7 +22,7 @@ export async function GET() {
   } catch (error) {
     console.error("Failed to fetch settings:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch settings" },
+      { success: false, error: "加载设置失败" },
       { status: 500 },
     );
   }
@@ -52,12 +53,14 @@ export async function POST(request: NextRequest) {
     );
 
     await Promise.all(updates);
+    invalidatePublicSettingsCache();
+    invalidateSidebarCache();
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to update settings:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to update settings" },
+      { success: false, error: "保存设置失败" },
       { status: 500 },
     );
   }

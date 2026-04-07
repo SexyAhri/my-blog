@@ -29,17 +29,17 @@ export default function AdminLoginView() {
       });
 
       if (result?.error) {
-        message.error("Login failed. Please check your credentials.");
+        message.error("登录失败，请检查账号或密码。");
         setLoading(false);
         return;
       }
 
-      message.success("Login successful");
+      message.success("登录成功");
       router.push("/admin");
       router.refresh();
     } catch (error) {
       console.error("Login error:", error);
-      message.error("Login failed. Please try again.");
+      message.error("登录失败，请稍后重试。");
       setLoading(false);
     }
   };
@@ -47,23 +47,23 @@ export default function AdminLoginView() {
   const features = [
     {
       icon: <EditOutlined />,
-      title: "Rich editor",
-      desc: "Write and refine long-form posts in one place.",
+      title: "沉浸式编辑",
+      desc: "在一个界面里完成长文写作、排版和润色。",
     },
     {
       icon: <FileTextOutlined />,
-      title: "Content hub",
-      desc: "Manage drafts, published posts, and revisions quickly.",
+      title: "内容中枢",
+      desc: "集中管理草稿、已发布文章和后续修订。",
     },
     {
       icon: <FolderOutlined />,
-      title: "Taxonomy",
-      desc: "Keep categories, tags, and series organized.",
+      title: "分类体系",
+      desc: "让分类、标签和系列文章始终保持清晰有序。",
     },
     {
       icon: <ThunderboltOutlined />,
-      title: "Fast publish",
-      desc: "Ship updates and scheduled posts with less friction.",
+      title: "高效发布",
+      desc: "更轻松地发布更新和管理定时文章。",
     },
   ];
 
@@ -142,9 +142,9 @@ export default function AdminLoginView() {
               marginBottom: 16,
             }}
           >
-            Blog admin
+            博客后台
             <br />
-            workspace
+            工作台
           </h1>
           <p
             style={{
@@ -155,7 +155,7 @@ export default function AdminLoginView() {
               lineHeight: 1.8,
             }}
           >
-            A focused place for writing, reviewing, and publishing your content.
+            一个专注于写作、审核与发布内容的后台空间。
           </p>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
@@ -228,7 +228,7 @@ export default function AdminLoginView() {
               marginBottom: 8,
             }}
           >
-            Welcome back
+            欢迎回来
           </h2>
           <p
             style={{
@@ -237,7 +237,7 @@ export default function AdminLoginView() {
               fontSize: 15,
             }}
           >
-            Sign in to continue to the admin dashboard.
+            登录后继续进入后台管理面板。
           </p>
 
           <Form
@@ -247,25 +247,25 @@ export default function AdminLoginView() {
             size="large"
           >
             <Form.Item
-              label="Username or email"
+              label="用户名或邮箱"
               name="email"
-              rules={[{ required: true, message: "Please enter your account." }]}
+              rules={[{ required: true, message: "请输入账号。" }]}
             >
               <Input
                 prefix={<UserOutlined style={{ color: token.colorTextTertiary }} />}
-                placeholder="Enter your username or email"
+                placeholder="输入用户名或邮箱"
                 style={{ height: 48, borderRadius: 8 }}
               />
             </Form.Item>
 
             <Form.Item
-              label="Password"
+              label="密码"
               name="password"
-              rules={[{ required: true, message: "Please enter your password." }]}
+              rules={[{ required: true, message: "请输入密码。" }]}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: token.colorTextTertiary }} />}
-                placeholder="Enter your password"
+                placeholder="输入密码"
                 style={{ height: 48, borderRadius: 8 }}
               />
             </Form.Item>
@@ -279,7 +279,7 @@ export default function AdminLoginView() {
                 }}
               >
                 <Form.Item name="remember" valuePropName="checked" noStyle>
-                  <Checkbox>Keep me signed in</Checkbox>
+                  <Checkbox>保持登录</Checkbox>
                 </Form.Item>
               </div>
             </Form.Item>
@@ -292,7 +292,7 @@ export default function AdminLoginView() {
                 block
                 style={{ height: 48, borderRadius: 8, fontSize: 16, fontWeight: 500 }}
               >
-                {loading ? "Signing in..." : "Sign in"}
+                {loading ? "登录中..." : "登录"}
               </Button>
             </Form.Item>
           </Form>

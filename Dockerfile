@@ -26,6 +26,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=5177
+ENV RUN_DB_MIGRATIONS=true
+ENV BOOTSTRAP_ADMIN_ON_EMPTY_DB=true
 
 # 安装 OpenSSL
 RUN apk add --no-cache openssl
@@ -38,14 +40,19 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY scripts/bootstrap-admin.mjs ./scripts/bootstrap-admin.mjs
+COPY scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
 
 # 创建上传目录
-RUN mkdir -p public/uploads && chown -R nextjs:nodejs public/uploads
+RUN mkdir -p public/uploads \
+  && chmod +x ./scripts/docker-entrypoint.sh \
+  && chown -R nextjs:nodejs /app
 
 USER nextjs
 
 EXPOSE 5177
 
+ENTRYPOINT ["./scripts/docker-entrypoint.sh"]
 CMD ["node", "server.js"]

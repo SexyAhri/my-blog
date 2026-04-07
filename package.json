@@ -9,6 +9,8 @@
     "lint": "eslint . --max-warnings=0",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:bootstrap": "node scripts/bootstrap-admin.mjs",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
     "db:push": "prisma db push",

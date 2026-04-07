@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPublicSiteSettings } from "@/lib/public-settings";
 
 export async function GET() {
   try {
-    const setting = await prisma.setting.findUnique({
-      where: { key: "siteAnalytics" },
-    });
+    const settings = await getPublicSiteSettings();
 
     return NextResponse.json({
       success: true,
-      code: setting?.value || null,
+      code: settings.siteAnalytics,
     });
   } catch {
     return NextResponse.json({ success: false, code: null });

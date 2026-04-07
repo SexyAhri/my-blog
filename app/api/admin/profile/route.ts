@@ -26,7 +26,7 @@ export async function GET() {
 
     if (!user) {
       return NextResponse.json(
-        { error: "User not found" },
+        { success: false, error: "用户不存在" },
         { status: 404 },
       );
     }
@@ -35,7 +35,7 @@ export async function GET() {
   } catch (error) {
     console.error("Failed to fetch profile:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch profile" },
+      { success: false, error: "获取个人资料失败" },
       { status: 500 },
     );
   }
@@ -64,7 +64,7 @@ export async function PUT(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: "User not found" },
+        { success: false, error: "用户不存在" },
         { status: 404 },
       );
     }
@@ -86,7 +86,7 @@ export async function PUT(request: NextRequest) {
       );
       if (!isPasswordValid) {
         return NextResponse.json(
-          { success: false, error: "Current password is incorrect" },
+          { success: false, error: "当前密码不正确" },
           { status: 400 },
         );
       }
@@ -99,7 +99,7 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error: "New password must be different from the current password",
+            error: "新密码不能与当前密码相同",
           },
           { status: 400 },
         );
@@ -124,7 +124,7 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error("Failed to update profile:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to update profile" },
+      { success: false, error: "更新个人资料失败" },
       { status: 500 },
     );
   }

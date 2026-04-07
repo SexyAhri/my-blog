@@ -48,7 +48,7 @@ export default function TagsPage() {
         setTags(data.data);
       }
     } catch {
-      message.error("Failed to load tags");
+      message.error("加载标签失败");
     } finally {
       setLoading(false);
     }
@@ -65,10 +65,10 @@ export default function TagsPage() {
 
   const handleDelete = (id: string) => {
     modal.confirm({
-      title: "Delete tag",
-      content: "This action cannot be undone. Continue?",
-      okText: "Delete",
-      cancelText: "Cancel",
+      title: "删除标签",
+      content: "删除后无法恢复，确定继续吗？",
+      okText: "删除",
+      cancelText: "取消",
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
@@ -81,13 +81,13 @@ export default function TagsPage() {
           };
 
           if (data.success) {
-            message.success("Tag deleted");
+            message.success("标签已删除");
             await loadTags();
           } else {
-            message.error(data.error || "Failed to delete tag");
+            message.error(data.error || "删除标签失败");
           }
         } catch {
-          message.error("Failed to delete tag");
+          message.error("删除标签失败");
         }
       },
     });
@@ -109,15 +109,15 @@ export default function TagsPage() {
       const data = (await res.json()) as { success: boolean; error?: string };
 
       if (data.success) {
-        message.success(editingTag ? "Tag updated" : "Tag created");
+        message.success(editingTag ? "标签已更新" : "标签已创建");
         setDrawerOpen(false);
         setEditingTag(null);
         await loadTags();
       } else {
-        message.error(data.error || "Operation failed");
+        message.error(data.error || "操作失败");
       }
     } catch {
-      message.error("Operation failed");
+      message.error("操作失败");
     } finally {
       setSubmitting(false);
     }
@@ -127,21 +127,21 @@ export default function TagsPage() {
 
   const columns: ColumnsType<TagItem> = [
     {
-      title: "Name",
+      title: "名称",
       dataIndex: "name",
       key: "name",
       width: "30%",
       render: (text: string) => <Tag color="pink">{text}</Tag>,
     },
     {
-      title: "Slug",
+      title: "别名",
       dataIndex: "slug",
       key: "slug",
       width: "30%",
       render: (text: string) => <code style={{ color: "#1890ff" }}>{text}</code>,
     },
     {
-      title: "Posts",
+      title: "文章数",
       key: "posts",
       width: "20%",
       render: (_value: unknown, record: TagItem) => (
@@ -149,13 +149,13 @@ export default function TagsPage() {
       ),
     },
     {
-      title: "Actions",
+      title: "操作",
       key: "action",
       width: "20%",
       render: (_value: unknown, record: TagItem) => (
         <Space size="small">
           <Button type="link" size="small" onClick={() => handleEdit(record)}>
-            Edit
+            编辑
           </Button>
           <Button
             type="link"
@@ -163,7 +163,7 @@ export default function TagsPage() {
             danger
             onClick={() => handleDelete(record.id)}
           >
-            Delete
+            删除
           </Button>
         </Space>
       ),
@@ -175,7 +175,7 @@ export default function TagsPage() {
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12}>
           <MetricCard
-            title="Tags"
+            title="标签数"
             value={tags.length}
             icon={<TagsOutlined />}
             color="#1890ff"
@@ -183,7 +183,7 @@ export default function TagsPage() {
         </Col>
         <Col xs={24} sm={12}>
           <MetricCard
-            title="Posts with Tags"
+            title="标签下文章数"
             value={totalPosts}
             icon={<TagsOutlined />}
             color="#52c41a"
@@ -192,11 +192,11 @@ export default function TagsPage() {
       </Row>
 
       <DataTable<TagItem>
-        cardTitle="Tag List"
+        cardTitle="标签列表"
         cardExtra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => void loadTags()}>
-              Refresh
+              刷新
             </Button>
             <Button
               type="primary"
@@ -206,7 +206,7 @@ export default function TagsPage() {
                 setDrawerOpen(true);
               }}
             >
-              Add Tag
+              新建标签
             </Button>
           </Space>
         }
@@ -218,7 +218,7 @@ export default function TagsPage() {
       />
 
       <FormDrawer<TagFormValues>
-        title={editingTag ? "Edit Tag" : "Add Tag"}
+        title={editingTag ? "编辑标签" : "新建标签"}
         open={drawerOpen}
         onClose={() => {
           setDrawerOpen(false);
@@ -241,8 +241,8 @@ export default function TagsPage() {
         }
         loading={submitting}
       >
-        <InputItem name="name" label="Tag Name" required />
-        <InputItem name="slug" label="Slug" required />
+        <InputItem name="name" label="标签名称" required />
+        <InputItem name="slug" label="别名" required />
       </FormDrawer>
     </div>
   );

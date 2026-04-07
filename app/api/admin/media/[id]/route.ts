@@ -29,7 +29,7 @@ export async function DELETE(
 
     if (!media) {
       return NextResponse.json(
-        { success: false, error: "Media not found" },
+        { success: false, error: "媒体不存在" },
         { status: 404 },
       );
     }
@@ -46,7 +46,7 @@ export async function DELETE(
       return NextResponse.json(
         {
           success: false,
-          error: "Media is still referenced by content or settings",
+          error: "该媒体仍被内容或设置引用",
           usage,
         },
         { status: 409 },
@@ -66,7 +66,7 @@ export async function DELETE(
   } catch (error) {
     console.error("Failed to delete media:", error);
     return NextResponse.json(
-      { success: false, error: "Delete failed" },
+      { success: false, error: "删除失败" },
       { status: 500 },
     );
   }
@@ -97,7 +97,7 @@ export async function PATCH(
 
     if (!media) {
       return NextResponse.json(
-        { success: false, error: "Media not found" },
+        { success: false, error: "媒体不存在" },
         { status: 404 },
       );
     }
@@ -105,7 +105,7 @@ export async function PATCH(
     const normalizedPath = normalizeMediaPath(media.filepath);
     if (!normalizedPath) {
       return NextResponse.json(
-        { success: false, error: "Media filepath is invalid" },
+        { success: false, error: "媒体文件路径无效" },
         { status: 400 },
       );
     }
@@ -113,7 +113,7 @@ export async function PATCH(
     const absolutePath = resolveUploadFilepath(normalizedPath);
     if (!absolutePath) {
       return NextResponse.json(
-        { success: false, error: "Media filepath is invalid" },
+        { success: false, error: "媒体文件路径无效" },
         { status: 400 },
       );
     }
@@ -123,7 +123,7 @@ export async function PATCH(
 
     if (!file) {
       return NextResponse.json(
-        { success: false, error: "File is required" },
+        { success: false, error: "必须上传文件" },
         { status: 400 },
       );
     }
@@ -164,7 +164,7 @@ export async function PATCH(
   } catch (error) {
     console.error("Failed to replace media:", error);
     return NextResponse.json(
-      { success: false, error: "Replace failed" },
+      { success: false, error: "替换失败" },
       { status: 500 },
     );
   }
@@ -204,7 +204,7 @@ export async function PUT(
   } catch (error) {
     console.error("Failed to update media:", error);
     return NextResponse.json(
-      { success: false, error: "Update failed" },
+      { success: false, error: "更新失败" },
       { status: 500 },
     );
   }

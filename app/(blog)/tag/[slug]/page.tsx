@@ -1,124 +1,72 @@
-"use client";
-
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { Empty, Pagination, Spin } from "antd";
+import type { Metadata } from "next";
+import { Empty, Pagination } from "antd";
 import { TagOutlined } from "@ant-design/icons";
+import { notFound } from "next/navigation";
 import PostCard from "@/components/blog/PostCard";
 import BlogSidebar from "@/components/blog/BlogSidebar";
+import { getTagPageData, getTagSummary, parsePageParam } from "@/lib/public-posts";
+import { SITE_URL } from "@/lib/site-config";
 
-interface Post {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt?: string;
-  coverImage?: string;
-  publishedAt: string;
-  viewCount: number;
-  author: {
-    name: string;
-  };
-  category?: {
-    name: string;
-    slug: string;
-  };
-  tags?: Array<{
-    tag: {
-      name: string;
-      slug: string;
+interface Props {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
+}
+
+function getTagPageHref(slug: string, page: number) {
+  return page <= 1 ? `/tag/${slug}` : `/tag/${slug}?page=${page}`;
+}
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: Props): Promise<Metadata> {
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
+  const page = parsePageParam(query.page);
+  const tag = await getTagSummary(slug);
+
+  if (!tag) {
+    return {
+      title: "Tag not found",
     };
-  }>;
-}
+  }
 
-interface TagSummary {
-  id: string;
-  name: string;
-  slug: string;
-}
+  const canonicalUrl =
+    page > 1 ? `${SITE_URL}/tag/${tag.slug}?page=${page}` : `${SITE_URL}/tag/${tag.slug}`;
+  const title = page > 1 ? `${tag.name} - Page ${page}` : tag.name;
+  const description =
+    page > 1
+      ? `Browse posts tagged with ${tag.name}, page ${page}.`
+      : `Browse all posts tagged with ${tag.name}.`;
 
-interface TagsResponse {
-  success: boolean;
-  data: TagSummary[];
-  error?: string;
-}
-
-interface PostsResponse {
-  success: boolean;
-  data: Post[];
-  pagination: {
-    total: number;
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: canonicalUrl,
+    },
   };
-  error?: string;
 }
 
-export default function TagPage() {
-  const params = useParams<{ slug: string }>();
-  const slug = params.slug;
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [tagName, setTagName] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const pageSize = 10;
+export default async function TagPage({ params, searchParams }: Props) {
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
+  const page = parsePageParam(query.page);
+  const data = await getTagPageData(slug, page);
 
-  const loadTagPage = useCallback(async () => {
-    if (!slug) {
-      setPosts([]);
-      setTagName("");
-      setTotal(0);
-      setLoading(false);
-      return;
-    }
+  if (!data) {
+    notFound();
+  }
 
-    setLoading(true);
+  const { tag, posts, pagination } = data;
 
-    try {
-      const tagsRes = await fetch("/api/tags");
-      const tagsData = (await tagsRes.json()) as TagsResponse;
-
-      if (!tagsData.success) {
-        setPosts([]);
-        setTagName("");
-        setTotal(0);
-        return;
-      }
-
-      const tag = tagsData.data.find((item) => item.slug === slug);
-
-      if (!tag) {
-        setPosts([]);
-        setTagName("");
-        setTotal(0);
-        return;
-      }
-
-      setTagName(tag.name);
-
-      const postsRes = await fetch(
-        `/api/posts?tagId=${tag.id}&page=${page}&pageSize=${pageSize}`,
-      );
-      const postsData = (await postsRes.json()) as PostsResponse;
-
-      if (postsData.success) {
-        setPosts(postsData.data);
-        setTotal(postsData.pagination.total);
-      } else {
-        setPosts([]);
-        setTotal(0);
-      }
-    } catch (error) {
-      console.error("Failed to load tag page:", error);
-      setPosts([]);
-      setTagName("");
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, slug]);
-
-  useEffect(() => {
-    void loadTagPage();
-  }, [loadTagPage]);
+  if (pagination.totalPages > 0 && page > pagination.totalPages) {
+    notFound();
+  }
 
   return (
     <div className="blog-container">
@@ -126,15 +74,11 @@ export default function TagPage() {
         <div className="blog-posts">
           <div className="category-header">
             <TagOutlined style={{ fontSize: 32, color: "#722ed1" }} />
-            <h1>{tagName || "Tag"}</h1>
-            <p>{total} posts</p>
+            <h1>{tag.name}</h1>
+            <p>{pagination.total} posts</p>
           </div>
 
-          {loading ? (
-            <div style={{ textAlign: "center", padding: 100 }}>
-              <Spin size="large" />
-            </div>
-          ) : posts.length === 0 ? (
+          {posts.length === 0 ? (
             <Empty description="No posts found for this tag." />
           ) : (
             <>
@@ -142,15 +86,29 @@ export default function TagPage() {
                 <PostCard key={post.id} post={post} />
               ))}
 
-              {total > pageSize && (
+              {pagination.total > pagination.pageSize && (
                 <div className="blog-pagination">
                   <Pagination
                     current={page}
-                    total={total}
-                    pageSize={pageSize}
-                    onChange={setPage}
+                    total={pagination.total}
+                    pageSize={pagination.pageSize}
                     showSizeChanger={false}
                     showTotal={(count) => `${count} posts`}
+                    itemRender={(targetPage, type, original) => {
+                      if (type === "page") {
+                        return <a href={getTagPageHref(tag.slug, targetPage)}>{targetPage}</a>;
+                      }
+
+                      if (type === "prev" && page > 1) {
+                        return <a href={getTagPageHref(tag.slug, page - 1)}>Prev</a>;
+                      }
+
+                      if (type === "next" && page < pagination.totalPages) {
+                        return <a href={getTagPageHref(tag.slug, page + 1)}>Next</a>;
+                      }
+
+                      return original;
+                    }}
                   />
                 </div>
               )}

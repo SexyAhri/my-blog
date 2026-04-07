@@ -29,7 +29,7 @@ export async function GET() {
       {
         success: false,
         error:
-          error instanceof Error ? error.message : "Failed to fetch categories",
+          error instanceof Error ? error.message : "获取分类失败",
       },
       { status: 500 },
     );
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     if (!name || !slug) {
       return NextResponse.json(
-        { success: false, error: "Name and slug are required" },
+        { success: false, error: "名称和别名不能为空" },
         { status: 400 },
       );
     }
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       return NextResponse.json(
-        { success: false, error: "Slug already exists" },
+        { success: false, error: "别名已存在" },
         { status: 400 },
       );
     }
@@ -78,14 +78,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: category,
-      message: "Category created",
+      message: "分类已创建",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
         error:
-          error instanceof Error ? error.message : "Failed to create category",
+          error instanceof Error ? error.message : "创建分类失败",
       },
       { status: 500 },
     );

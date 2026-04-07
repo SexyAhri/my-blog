@@ -13,6 +13,7 @@ This project ships with:
 - A server-side admin access gate that can require a secret entry URL before the normal admin login page
 - Scheduled publishing support protected by a bearer token
 - Media usage auditing to detect missing files, orphaned uploads, and broken references
+- An SSR-first public data layer for sidebar, footer, analytics, and initial comment data
 
 ## Stack
 
@@ -38,6 +39,7 @@ This project ships with:
 - RSS feed and sitemap generation
 - Open Graph, Twitter card, and structured metadata support
 - Profile card settings, social links, privacy page, and footer settings
+- Server-rendered sidebar, footer, analytics config, category nav, and initial comment payloads
 
 ### Admin dashboard
 
@@ -54,6 +56,10 @@ This project ships with:
 - Server-side validation for post, settings, profile, series, and media mutations
 - Matching client-side form validation for the main admin forms
 - Protected cron endpoint using `Authorization: Bearer <CRON_SECRET>`
+
+## Additional Docs
+
+- [Maintenance Notes](docs/maintenance.md)
 
 ## Getting Started
 
@@ -74,8 +80,8 @@ Copy-Item .env.example .env
 Update `.env`, then run:
 
 ```bash
-npm run db:push
-npm run db:seed
+npm run prisma:migrate
+npm run prisma:seed
 npm run dev
 ```
 
@@ -102,6 +108,19 @@ The app runs on `http://localhost:5177`.
 | `RESEND_API_KEY` | Enables comment notification emails |
 | `NEXT_PUBLIC_SITE_URL` | Public site URL used in emails and absolute links |
 | `CRON_SECRET` | Secures `/api/cron/publish` |
+| `ANALYTICS_TIME_ZONE` | Time zone used by the admin stats queries; defaults to `Asia/Shanghai` |
+
+## Database Workflow
+
+Prisma migrations are now the source of truth for schema changes.
+
+- Use `npm run prisma:migrate` during local development
+- Use `npm run prisma:migrate:deploy` in production, CI, and containers
+- Use `npm run prisma:bootstrap` only when you need a safe first-admin bootstrap outside Docker
+- Use `npm run prisma:seed` only for disposable local/demo databases
+- Keep new schema changes in `prisma/migrations/*` instead of adding new one-off SQL files
+
+The search optimization migration enables PostgreSQL `pg_trgm` and creates trigram indexes for published post search. If your database role cannot create extensions, install `pg_trgm` before running deploy migrations.
 
 ## Admin Access Flow
 
@@ -116,7 +135,7 @@ If `ADMIN_ACCESS_KEY` is empty, the extra gate is disabled and `/admin/login` st
 
 ## Media Library Audit
 
-The admin media page now includes storage and usage auditing:
+The admin media page includes storage and usage auditing:
 
 - Detects where each upload is used
 - Flags tracked media that are missing from storage
@@ -144,10 +163,15 @@ npm start
 npm run lint
 npm run prisma:generate
 npm run prisma:migrate
+npm run prisma:migrate:deploy
+npm run prisma:bootstrap
 npm run prisma:studio
 npm run db:push
 npm run db:seed
 ```
+
+`npm run db:push` is still available for disposable local experiments, but it should not replace the migration workflow for shared environments.
+`npm run db:seed` resets the database and loads demo data, so do not run it against a live environment.
 
 ## Docker Deployment
 
@@ -163,12 +187,22 @@ Optional Cloudflare tunnel:
 docker compose --profile cloudflare up -d
 ```
 
-After the container is running, initialize the database if needed:
+Deploy flow:
 
 ```bash
-docker exec -it vixenahri-blog npm run db:push
-docker exec -it vixenahri-blog npm run db:seed
+git push origin master
 ```
+
+Then GitHub Actions builds and pushes the Docker image, Watchtower pulls the new image on the server, and the container startup sequence automatically:
+
+- runs `prisma migrate deploy`
+- retries migrations until the database is reachable
+- creates the first admin user and default site settings when the database is empty
+- starts the app only after the bootstrap steps succeed
+
+The startup bootstrap is safe for live environments. It does not reset data and only initializes the admin/settings on an empty database.
+
+Do not run `npm run db:seed` in production unless you intentionally want to wipe the database and load demo content.
 
 ## Notes
 

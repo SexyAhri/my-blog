@@ -131,10 +131,23 @@ class MemoryCache {
 
 export const cache = new MemoryCache();
 
+export function invalidatePublicSettingsCache() {
+  cache.delete("settings:public");
+}
+
+export function invalidateSidebarCache() {
+  cache.delete("sidebar:blog");
+}
+
+export function invalidateCommentCaches() {
+  cache.deleteByPrefix("comments:");
+}
+
 export function invalidatePostCaches(
   slugs: Array<string | null | undefined> = [],
 ) {
   cache.deletePattern("^posts:");
+  invalidateSidebarCache();
 
   for (const slug of slugs) {
     if (slug) {
@@ -146,6 +159,7 @@ export function invalidatePostCaches(
 export function invalidateTaxonomyCaches() {
   cache.delete("categories:all");
   cache.delete("tags:all");
+  invalidateSidebarCache();
 }
 
 export const CACHE_TTL = {

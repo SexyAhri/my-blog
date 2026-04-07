@@ -79,7 +79,7 @@ export default function SettingsPage() {
       const data = (await res.json()) as SettingsResponse;
 
       if (!data.success || !data.data) {
-        message.error(data.error || "Failed to load settings");
+        message.error(data.error || "加载设置失败");
         form.setFieldsValue(DEFAULT_SETTINGS);
         return;
       }
@@ -108,7 +108,7 @@ export default function SettingsPage() {
         siteAvatar: data.data.siteAvatar || DEFAULT_SETTINGS.siteAvatar,
       });
     } catch {
-      message.error("Failed to load settings");
+      message.error("加载设置失败");
       form.setFieldsValue(DEFAULT_SETTINGS);
     } finally {
       setLoading(false);
@@ -142,12 +142,12 @@ export default function SettingsPage() {
       };
 
       if (data.success) {
-        message.success("Settings saved");
+        message.success("设置已保存");
       } else {
-        message.error(data.error || "Failed to save settings");
+        message.error(data.error || "保存设置失败");
       }
     } catch {
-      message.error("Failed to save settings");
+      message.error("保存设置失败");
     } finally {
       setSaving(false);
     }
@@ -165,10 +165,10 @@ export default function SettingsPage() {
       >
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>
-            Site Settings
+            网站设置
           </h2>
           <p style={{ margin: "4px 0 0", color: "#999" }}>
-            Configure site content, profile information, and publishing options.
+            配置站点信息、个人资料和发布选项。
           </p>
         </div>
         <Button
@@ -177,7 +177,7 @@ export default function SettingsPage() {
           loading={saving}
           onClick={() => form.submit()}
         >
-          Save Settings
+          保存设置
         </Button>
       </div>
 
@@ -186,20 +186,20 @@ export default function SettingsPage() {
           activeKey={activeTab}
           onChange={setActiveTab}
           items={[
-            { key: "basic", label: "Basic" },
-            { key: "profile", label: "Profile" },
+            { key: "basic", label: "基础" },
+            { key: "profile", label: "资料" },
             { key: "seo", label: "SEO" },
-            { key: "display", label: "Display" },
-            { key: "social", label: "Social" },
+            { key: "display", label: "显示" },
+            { key: "social", label: "社交" },
           ]}
         />
 
         <Card style={{ display: activeTab === "basic" ? "block" : "none" }}>
           <Form.Item
-            label="Site Name"
+            label="站点名称"
             name="siteName"
             rules={[
-              createRequiredTrimmedRule("Site name", SETTINGS_LIMITS.siteName),
+              createRequiredTrimmedRule("站点名称", SETTINGS_LIMITS.siteName),
             ]}
           >
             <Input
@@ -209,26 +209,26 @@ export default function SettingsPage() {
             />
           </Form.Item>
           <Form.Item
-            label="Site Description"
+            label="站点描述"
             name="siteDescription"
             rules={[
               createRequiredTrimmedRule(
-                "Site description",
+                "站点描述",
                 SETTINGS_LIMITS.siteDescription,
               ),
             ]}
           >
             <TextArea
               rows={3}
-              placeholder="A concise summary of your blog."
+              placeholder="用一句话概括你的博客。"
               showCount
               maxLength={SETTINGS_LIMITS.siteDescription}
             />
           </Form.Item>
           <Form.Item
-            label="Keywords"
+            label="关键词"
             name="siteKeywords"
-            help="Separate multiple keywords with commas."
+            help="多个关键词请用英文逗号分隔。"
             rules={[createKeywordsRule(SETTINGS_LIMITS.siteKeywords)]}
           >
             <Input
@@ -238,10 +238,10 @@ export default function SettingsPage() {
             />
           </Form.Item>
           <Form.Item
-            label="Site URL"
+            label="站点地址"
             name="siteUrl"
             rules={[
-              createOptionalHttpUrlRule("Site URL", SETTINGS_LIMITS.siteUrl),
+              createOptionalHttpUrlRule("站点地址", SETTINGS_LIMITS.siteUrl),
             ]}
           >
             <Input
@@ -250,24 +250,24 @@ export default function SettingsPage() {
             />
           </Form.Item>
           <Form.Item
-            label="Author"
+            label="作者名"
             name="siteAuthor"
             rules={[
-              createOptionalTrimmedRule("Author", SETTINGS_LIMITS.siteAuthor),
+              createOptionalTrimmedRule("作者名", SETTINGS_LIMITS.siteAuthor),
             ]}
           >
             <Input
-              placeholder="Your name"
+              placeholder="输入作者名称"
               maxLength={SETTINGS_LIMITS.siteAuthor}
               showCount
             />
           </Form.Item>
           <Form.Item
-            label="Contact Email"
+            label="联系邮箱"
             name="siteEmail"
             rules={[
               createOptionalEmailRule(
-                "Contact email",
+                "联系邮箱",
                 SETTINGS_LIMITS.siteEmail,
               ),
             ]}
@@ -279,17 +279,17 @@ export default function SettingsPage() {
             />
           </Form.Item>
           <Form.Item
-            label="ICP Record"
+            label="ICP备案号"
             name="siteIcp"
             rules={[
               createOptionalTrimmedRule(
-                "ICP record",
+                "ICP备案号",
                 SETTINGS_LIMITS.siteIcp,
               ),
             ]}
           >
             <Input
-              placeholder="Optional for CN deployment"
+              placeholder="中国大陆部署时可填写"
               maxLength={SETTINGS_LIMITS.siteIcp}
               showCount
             />
@@ -298,18 +298,18 @@ export default function SettingsPage() {
 
         <Card style={{ display: activeTab === "profile" ? "block" : "none" }}>
           <Form.Item
-            label="Profile Banner"
+            label="资料横幅"
             name="siteProfileBanner"
-            help="Shown at the top of the profile card."
+              help="显示在侧边栏资料卡顶部。"
             rules={[
               createOptionalImageSourceRule(
-                "Profile banner",
+                "资料横幅",
                 SETTINGS_LIMITS.siteProfileBanner,
               ),
             ]}
           >
             <Input
-              placeholder="Select or paste an image URL"
+              placeholder="选择图片或粘贴图片地址"
               maxLength={SETTINGS_LIMITS.siteProfileBanner}
               addonAfter={
                 <Button
@@ -318,7 +318,7 @@ export default function SettingsPage() {
                   icon={<PictureOutlined />}
                   onClick={() => setBannerPickerOpen(true)}
                 >
-                  Choose
+                  选择
                 </Button>
               }
             />
@@ -339,7 +339,7 @@ export default function SettingsPage() {
                 <div style={{ marginBottom: 16 }}>
                   <Image
                     src={banner}
-                    alt="Banner preview"
+                    alt="横幅预览"
                     style={{
                       maxWidth: 300,
                       maxHeight: 90,
@@ -352,36 +352,36 @@ export default function SettingsPage() {
             }}
           </Form.Item>
           <Form.Item
-            label="Profile Motto"
+            label="资料简介"
             name="siteMotto"
-            help="Appears in the sidebar profile card."
+              help="显示在侧边栏资料卡中。"
             rules={[
               createOptionalTrimmedRule(
-                "Profile motto",
+                "资料简介",
                 SETTINGS_LIMITS.siteMotto,
               ),
             ]}
           >
             <TextArea
               rows={2}
-              placeholder="Write a short one-line intro."
+              placeholder="写一句简短的个人介绍。"
               maxLength={SETTINGS_LIMITS.siteMotto}
               showCount
             />
           </Form.Item>
           <Form.Item
-            label="Avatar"
+            label="头像"
             name="siteAvatar"
-            help="Square image recommended."
+            help="建议使用正方形图片。"
             rules={[
               createOptionalImageSourceRule(
-                "Avatar",
+                "头像",
                 SETTINGS_LIMITS.siteAvatar,
               ),
             ]}
           >
             <Input
-              placeholder="Select or paste an image URL"
+              placeholder="选择图片或粘贴图片地址"
               maxLength={SETTINGS_LIMITS.siteAvatar}
               addonAfter={
                 <Button
@@ -390,7 +390,7 @@ export default function SettingsPage() {
                   icon={<PictureOutlined />}
                   onClick={() => setAvatarPickerOpen(true)}
                 >
-                  Choose
+                  选择
                 </Button>
               }
             />
@@ -409,7 +409,7 @@ export default function SettingsPage() {
                 <div style={{ marginBottom: 16 }}>
                   <Image
                     src={avatar}
-                    alt="Avatar preview"
+                    alt="头像预览"
                     width={80}
                     height={80}
                     style={{ borderRadius: "50%", objectFit: "cover" }}
@@ -422,42 +422,42 @@ export default function SettingsPage() {
 
         <Card style={{ display: activeTab === "seo" ? "block" : "none" }}>
           <Form.Item
-            label="Analytics Code"
+            label="统计代码"
             name="siteAnalytics"
-            help="Paste your analytics script or code snippet."
+            help="粘贴统计脚本或代码片段。"
             rules={[
               createOptionalTrimmedRule(
-                "Analytics code",
+                "统计代码",
                 SETTINGS_LIMITS.siteAnalytics,
               ),
             ]}
           >
             <TextArea
               rows={6}
-              placeholder="Analytics snippet"
+              placeholder="粘贴统计代码片段"
               style={{ fontFamily: "monospace" }}
               maxLength={SETTINGS_LIMITS.siteAnalytics}
             />
           </Form.Item>
           <Form.Item
-            label="Generate Sitemap"
+            label="启用 Sitemap"
             name="enableSitemap"
             valuePropName="checked"
           >
-            <Switch checkedChildren="On" unCheckedChildren="Off" />
+            <Switch checkedChildren="开" unCheckedChildren="关" />
           </Form.Item>
-          <Form.Item label="Generate RSS" name="enableRss" valuePropName="checked">
-            <Switch checkedChildren="On" unCheckedChildren="Off" />
+          <Form.Item label="启用 RSS" name="enableRss" valuePropName="checked">
+            <Switch checkedChildren="开" unCheckedChildren="关" />
           </Form.Item>
         </Card>
 
         <Card style={{ display: activeTab === "display" ? "block" : "none" }}>
           <Form.Item
-            label="Posts Per Page"
+            label="每页文章数"
             name="postsPerPage"
             rules={[
               createIntegerRangeRule(
-                "Posts per page",
+                "每页文章数",
                 POSTS_PER_PAGE_RANGE.min,
                 POSTS_PER_PAGE_RANGE.max,
               ),
@@ -470,11 +470,11 @@ export default function SettingsPage() {
             />
           </Form.Item>
           <Form.Item
-            label="Enable Comments"
+            label="启用评论"
             name="enableComments"
             valuePropName="checked"
           >
-            <Switch checkedChildren="On" unCheckedChildren="Off" />
+            <Switch checkedChildren="开" unCheckedChildren="关" />
           </Form.Item>
         </Card>
 
@@ -525,11 +525,11 @@ export default function SettingsPage() {
             />
           </Form.Item>
           <Form.Item
-            label="Public Email"
+            label="公开邮箱"
             name="socialEmail"
             rules={[
               createOptionalEmailRule(
-                "Public email",
+                "公开邮箱",
                 SETTINGS_LIMITS.socialEmail,
               ),
             ]}

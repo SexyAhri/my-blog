@@ -1,17 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
-interface Comment {
+export interface CommentItem {
   id: string;
   author: string;
   content: string;
   createdAt: string;
-  replies?: Comment[];
+  replies?: CommentItem[];
 }
 
 interface CommentSectionProps {
   slug: string;
+  initialComments: CommentItem[];
+  initialEnabled: boolean;
 }
 
 interface CommentFormState {
@@ -21,16 +23,6 @@ interface CommentFormState {
   content: string;
 }
 
-interface CommentsResponse {
-  success: boolean;
-  data: Comment[];
-  error?: string;
-}
-
-interface DisplaySettingsResponse {
-  enableComments?: boolean;
-}
-
 const EMPTY_FORM: CommentFormState = {
   author: "",
   email: "",
@@ -38,45 +30,14 @@ const EMPTY_FORM: CommentFormState = {
   content: "",
 };
 
-export default function CommentSection({ slug }: CommentSectionProps) {
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function CommentSection({
+  slug,
+  initialComments,
+  initialEnabled,
+}: CommentSectionProps) {
   const [submitting, setSubmitting] = useState(false);
-  const [enabled, setEnabled] = useState(true);
   const [form, setForm] = useState<CommentFormState>(EMPTY_FORM);
   const [statusMessage, setStatusMessage] = useState("");
-
-  const loadSettings = useCallback(async () => {
-    try {
-      const res = await fetch("/api/settings/display");
-      const data = (await res.json()) as DisplaySettingsResponse;
-      setEnabled(data.enableComments !== false);
-    } catch {
-      setEnabled(true);
-    }
-  }, []);
-
-  const loadComments = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/comments?slug=${slug}`);
-      const data = (await res.json()) as CommentsResponse;
-      if (data.success) {
-        setComments(data.data);
-      } else {
-        setComments([]);
-      }
-    } catch (error) {
-      console.error("Failed to load comments:", error);
-      setComments([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [slug]);
-
-  useEffect(() => {
-    void loadSettings();
-    void loadComments();
-  }, [loadComments, loadSettings]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -115,13 +76,13 @@ export default function CommentSection({ slug }: CommentSectionProps) {
 
   return (
     <div className="comment-section">
-      {!enabled ? (
+      {!initialEnabled ? (
         <p style={{ color: "#999", textAlign: "center", padding: 20 }}>
           Comments are currently disabled.
         </p>
       ) : (
         <>
-          <h3>Comments ({comments.length})</h3>
+          <h3>Comments ({initialComments.length})</h3>
 
           <form onSubmit={handleSubmit} className="comment-form">
             <div className="form-row">
@@ -190,12 +151,12 @@ export default function CommentSection({ slug }: CommentSectionProps) {
           </form>
 
           <div className="comment-list">
-            {loading ? (
-              <p>Loading comments...</p>
-            ) : comments.length === 0 ? (
-              <p className="no-comments">No comments yet. Be the first to reply.</p>
+            {initialComments.length === 0 ? (
+              <p className="no-comments">
+                No comments yet. Be the first to comment.
+              </p>
             ) : (
-              comments.map((comment) => (
+              initialComments.map((comment) => (
                 <div key={comment.id} className="comment-item">
                   <div className="comment-header">
                     <span className="comment-author">{comment.author}</span>

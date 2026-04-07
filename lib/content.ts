@@ -1,4 +1,3 @@
-import DOMPurify from "isomorphic-dompurify";
 import { marked, Renderer } from "marked";
 
 export interface TocItem {
@@ -86,28 +85,117 @@ const allowedAttributes = [
   "width",
 ];
 
+const allowedTagSet = new Set(allowedTags);
+const allowedAttributeSet = new Set(allowedAttributes);
+const forbiddenTags = [
+  "embed",
+  "form",
+  "iframe",
+  "input",
+  "link",
+  "math",
+  "meta",
+  "object",
+  "script",
+  "style",
+  "svg",
+  "textarea",
+];
+const forbiddenTagSet = new Set(forbiddenTags);
+
+function escapeAttributeValue(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function isSafeAttributeValue(name: string, value: string): boolean {
+  if (name === "href") {
+    return /^(#|\/|\.{1,2}\/|https?:|mailto:|tel:)/i.test(value);
+  }
+
+  if (name === "src") {
+    return /^(\/|\.{1,2}\/|https?:|data:image\/)/i.test(value);
+  }
+
+  return true;
+}
+
+function sanitizeTag(tag: string): string {
+  const match = tag.match(/^<\s*(\/?)\s*([a-zA-Z0-9-]+)([^>]*)>$/);
+  if (!match) {
+    return "";
+  }
+
+  const isClosing = match[1] === "/";
+  const tagName = match[2].toLowerCase();
+
+  if (!allowedTagSet.has(tagName) || forbiddenTagSet.has(tagName)) {
+    return "";
+  }
+
+  if (isClosing) {
+    return `</${tagName}>`;
+  }
+
+  const attributes = match[3] ?? "";
+  const sanitizedAttributes: string[] = [];
+  const attrRegex =
+    /([^\s"'<>\/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+
+  for (const attrMatch of attributes.matchAll(attrRegex)) {
+    const rawName = attrMatch[1];
+    const rawValue = attrMatch[2] ?? attrMatch[3] ?? attrMatch[4];
+
+    if (!rawName || rawValue === undefined) {
+      continue;
+    }
+
+    const name = rawName.toLowerCase();
+    const value = rawValue.trim();
+
+    if (
+      !allowedAttributeSet.has(name) ||
+      name === "style" ||
+      name.startsWith("on") ||
+      !isSafeAttributeValue(name, value)
+    ) {
+      continue;
+    }
+
+    sanitizedAttributes.push(`${name}="${escapeAttributeValue(value)}"`);
+  }
+
+  if (
+    tagName === "a" &&
+    sanitizedAttributes.some((attr) => attr === 'target="_blank"') &&
+    !sanitizedAttributes.some((attr) => attr.startsWith("rel="))
+  ) {
+    sanitizedAttributes.push('rel="noopener noreferrer"');
+  }
+
+  const serializedAttributes =
+    sanitizedAttributes.length > 0 ? ` ${sanitizedAttributes.join(" ")}` : "";
+
+  return `<${tagName}${serializedAttributes}>`;
+}
+
 export function sanitizeRichContent(content: string): string {
-  return String(
-    DOMPurify.sanitize(content, {
-      ALLOWED_ATTR: allowedAttributes,
-      ALLOWED_TAGS: allowedTags,
-      FORBID_ATTR: ["style"],
-      FORBID_TAGS: [
-        "embed",
-        "form",
-        "iframe",
-        "input",
-        "link",
-        "math",
-        "meta",
-        "object",
-        "script",
-        "style",
-        "svg",
-        "textarea",
-      ],
-    }),
-  );
+  let sanitized = content.replace(/<!--[\s\S]*?-->/g, "");
+
+  for (const tag of forbiddenTags) {
+    const pairPattern = new RegExp(
+      `<${tag}\\b[^>]*>[\\s\\S]*?<\\/${tag}>`,
+      "gi",
+    );
+    const singlePattern = new RegExp(`<${tag}\\b[^>]*\\/?>`, "gi");
+    sanitized = sanitized.replace(pairPattern, "");
+    sanitized = sanitized.replace(singlePattern, "");
+  }
+
+  return sanitized.replace(/<[^>]*>/g, (tag) => sanitizeTag(tag));
 }
 
 export function calculateReadingTime(content: string): number {

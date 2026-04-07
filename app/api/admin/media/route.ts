@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Failed to fetch media:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch media" },
+      { success: false, error: "获取媒体失败" },
       { status: 500 },
     );
   }
@@ -105,7 +105,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!filepath) {
       return NextResponse.json(
-        { success: false, error: "A valid upload filepath is required" },
+        { success: false, error: "必须提供有效的上传文件路径" },
         { status: 400 },
       );
     }
@@ -119,7 +119,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "Tracked media must be deleted from its media record",
+          error: "已登记的媒体请从对应媒体记录中删除",
         },
         { status: 400 },
       );
@@ -132,7 +132,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "This upload is still referenced by content or settings",
+          error: "该上传文件仍被内容或设置引用",
           usage,
         },
         { status: 409 },
@@ -142,14 +142,14 @@ export async function DELETE(request: NextRequest) {
     const absolutePath = resolveUploadFilepath(filepath);
     if (!absolutePath) {
       return NextResponse.json(
-        { success: false, error: "Invalid upload filepath" },
+        { success: false, error: "上传文件路径无效" },
         { status: 400 },
       );
     }
 
     if (!existsSync(absolutePath)) {
       return NextResponse.json(
-        { success: false, error: "File not found" },
+        { success: false, error: "文件不存在" },
         { status: 404 },
       );
     }
@@ -160,7 +160,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error("Failed to delete orphaned media:", error);
     return NextResponse.json(
-      { success: false, error: "Delete failed" },
+      { success: false, error: "删除失败" },
       { status: 500 },
     );
   }
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json(
-        { success: false, error: "File is required" },
+        { success: false, error: "必须上传文件" },
         { status: 400 },
       );
     }
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: "User not found" },
+        { success: false, error: "用户不存在" },
         { status: 404 },
       );
     }
@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Failed to upload media:", error);
     return NextResponse.json(
-      { success: false, error: "Upload failed" },
+      { success: false, error: "上传失败" },
       { status: 500 },
     );
   }

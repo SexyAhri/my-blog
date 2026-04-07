@@ -37,20 +37,20 @@ export async function PUT(
   } catch (error: unknown) {
     if ((error as { code?: string })?.code === "P2025") {
       return NextResponse.json(
-        { success: false, error: "Series not found" },
+        { success: false, error: "系列不存在" },
         { status: 404 },
       );
     }
 
     if ((error as { code?: string })?.code === "P2002") {
       return NextResponse.json(
-        { success: false, error: "Series name or slug already exists" },
+        { success: false, error: "系列名称或别名已存在" },
         { status: 400 },
       );
     }
 
     return NextResponse.json(
-      { success: false, error: "Failed to update series" },
+      { success: false, error: "更新系列失败" },
       { status: 500 },
     );
   }
@@ -78,7 +78,7 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(
-      { success: false, error: "Failed to delete series" },
+      { success: false, error: "删除系列失败" },
       { status: 500 },
     );
   }

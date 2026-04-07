@@ -1,8 +1,11 @@
-import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendNewCommentNotification } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import {
+  getPublicCommentsByPostId,
+  getPublicCommentsBySlug,
+} from "@/lib/public-comments";
 
 interface CommentRequestBody {
   postId?: string;
@@ -27,36 +30,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const whereClause: Prisma.CommentWhereInput = { approved: true };
-
-    if (postId) {
-      whereClause.postId = postId;
-    } else if (slug) {
-      const post = await prisma.post.findUnique({
-        where: { slug },
-        select: { id: true },
-      });
-
-      if (!post) {
-        return NextResponse.json({ success: true, data: [] });
-      }
-
-      whereClause.postId = post.id;
-    }
-
-    const comments = await prisma.comment.findMany({
-      where: {
-        ...whereClause,
-        parentId: null,
-      },
-      orderBy: { createdAt: "desc" },
-      include: {
-        replies: {
-          where: { approved: true },
-          orderBy: { createdAt: "asc" },
-        },
-      },
-    });
+    const comments = postId
+      ? await getPublicCommentsByPostId(postId)
+      : await getPublicCommentsBySlug(slug!);
 
     return NextResponse.json({ success: true, data: comments });
   } catch (error) {

@@ -1,26 +1,18 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPublicSiteSettings } from "@/lib/public-settings";
 
 export async function GET() {
   try {
-    const keys = [
-      "socialGithub",
-      "socialTwitter",
-      "socialWeibo",
-      "socialEmail",
-      "siteIcp",
-    ];
+    const settings = await getPublicSiteSettings();
 
-    const settings = await prisma.setting.findMany({
-      where: { key: { in: keys } },
+    return NextResponse.json({
+      success: true,
+      socialGithub: settings.socialGithub,
+      socialTwitter: settings.socialTwitter,
+      socialWeibo: settings.socialWeibo,
+      socialEmail: settings.socialEmail,
+      siteIcp: settings.siteIcp,
     });
-
-    const result: Record<string, string> = { success: "true" };
-    settings.forEach((s) => {
-      result[s.key] = s.value;
-    });
-
-    return NextResponse.json({ success: true, ...result });
   } catch {
     return NextResponse.json({ success: false });
   }

@@ -16,6 +16,8 @@ services:
     image: ahridocker/my-blog:latest
     container_name: vixenahri-blog
     restart: unless-stopped
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     ports:
       - "5177:5177"
     environment:
@@ -31,6 +33,10 @@ services:
       - ADMIN_ACCESS_KEY=${ADMIN_ACCESS_KEY:-}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - CRON_SECRET=${CRON_SECRET:-}
+      - RUN_DB_MIGRATIONS=${RUN_DB_MIGRATIONS:-true}
+      - BOOTSTRAP_ADMIN_ON_EMPTY_DB=${BOOTSTRAP_ADMIN_ON_EMPTY_DB:-true}
+      - DB_MIGRATION_MAX_RETRIES=${DB_MIGRATION_MAX_RETRIES:-30}
+      - DB_MIGRATION_RETRY_INTERVAL=${DB_MIGRATION_RETRY_INTERVAL:-5}
     network_mode: "host"
     volumes:
       - ./uploads:/app/public/uploads
@@ -55,6 +61,5 @@ services:
 # 3. Start with Cloudflare tunnel: docker compose --profile cloudflare up -d
 # 4. View logs: docker compose logs -f vixenahri-blog
 # 5. Stop the stack: docker compose down
-# 6. Initialize the database when needed:
-#    docker exec -it vixenahri-blog npm run db:push
-#    docker exec -it vixenahri-blog npm run db:seed
+# 6. On startup the app automatically runs prisma migrate deploy
+#    and bootstraps the first admin user if the database is empty

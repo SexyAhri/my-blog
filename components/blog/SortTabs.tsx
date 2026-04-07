@@ -6,11 +6,11 @@ import { FireOutlined, ThunderboltOutlined } from "@ant-design/icons";
 type SortType = "latest" | "hot" | "liked";
 
 const sortTabs = [
-  { key: "latest" as SortType, label: "最新文章", icon: null },
-  { key: "hot" as SortType, label: "热门文章", icon: <FireOutlined /> },
+  { key: "latest" as SortType, label: "Latest", icon: null },
+  { key: "hot" as SortType, label: "Popular", icon: <FireOutlined /> },
   {
     key: "liked" as SortType,
-    label: "点赞最多",
+    label: "Most Liked",
     icon: <ThunderboltOutlined />,
   },
 ];

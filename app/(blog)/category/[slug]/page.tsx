@@ -1,124 +1,78 @@
-"use client";
-
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { Empty, Pagination, Spin } from "antd";
+import type { Metadata } from "next";
+import { Empty, Pagination } from "antd";
 import { FolderOutlined } from "@ant-design/icons";
+import { notFound } from "next/navigation";
 import PostCard from "@/components/blog/PostCard";
 import BlogSidebar from "@/components/blog/BlogSidebar";
+import {
+  getCategoryPageData,
+  getCategorySummary,
+  parsePageParam,
+} from "@/lib/public-posts";
+import { SITE_URL } from "@/lib/site-config";
 
-interface Post {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt?: string;
-  coverImage?: string;
-  publishedAt: string;
-  viewCount: number;
-  author: {
-    name: string;
-  };
-  category?: {
-    name: string;
-    slug: string;
-  };
-  tags?: Array<{
-    tag: {
-      name: string;
-      slug: string;
+interface Props {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
+}
+
+function getCategoryPageHref(slug: string, page: number) {
+  return page <= 1 ? `/category/${slug}` : `/category/${slug}?page=${page}`;
+}
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: Props): Promise<Metadata> {
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
+  const page = parsePageParam(query.page);
+  const category = await getCategorySummary(slug);
+
+  if (!category) {
+    return {
+      title: "Category not found",
     };
-  }>;
-}
+  }
 
-interface CategorySummary {
-  id: string;
-  name: string;
-  slug: string;
-}
+  const canonicalUrl =
+    page > 1
+      ? `${SITE_URL}/category/${category.slug}?page=${page}`
+      : `${SITE_URL}/category/${category.slug}`;
+  const title = page > 1 ? `${category.name} - Page ${page}` : category.name;
+  const description =
+    page > 1
+      ? `Browse posts in ${category.name}, page ${page}.`
+      : `Browse all posts in ${category.name}.`;
 
-interface CategoriesResponse {
-  success: boolean;
-  data: CategorySummary[];
-  error?: string;
-}
-
-interface PostsResponse {
-  success: boolean;
-  data: Post[];
-  pagination: {
-    total: number;
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: canonicalUrl,
+    },
   };
-  error?: string;
 }
 
-export default function CategoryPage() {
-  const params = useParams<{ slug: string }>();
-  const slug = params.slug;
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [categoryName, setCategoryName] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const pageSize = 10;
+export default async function CategoryPage({ params, searchParams }: Props) {
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
+  const page = parsePageParam(query.page);
+  const data = await getCategoryPageData(slug, page);
 
-  const loadCategoryPage = useCallback(async () => {
-    if (!slug) {
-      setPosts([]);
-      setCategoryName("");
-      setTotal(0);
-      setLoading(false);
-      return;
-    }
+  if (!data) {
+    notFound();
+  }
 
-    setLoading(true);
+  const { category, posts, pagination } = data;
 
-    try {
-      const categoriesRes = await fetch("/api/categories");
-      const categoriesData = (await categoriesRes.json()) as CategoriesResponse;
-
-      if (!categoriesData.success) {
-        setPosts([]);
-        setCategoryName("");
-        setTotal(0);
-        return;
-      }
-
-      const category = categoriesData.data.find((item) => item.slug === slug);
-
-      if (!category) {
-        setPosts([]);
-        setCategoryName("");
-        setTotal(0);
-        return;
-      }
-
-      setCategoryName(category.name);
-
-      const postsRes = await fetch(
-        `/api/posts?categoryId=${category.id}&page=${page}&pageSize=${pageSize}`,
-      );
-      const postsData = (await postsRes.json()) as PostsResponse;
-
-      if (postsData.success) {
-        setPosts(postsData.data);
-        setTotal(postsData.pagination.total);
-      } else {
-        setPosts([]);
-        setTotal(0);
-      }
-    } catch (error) {
-      console.error("Failed to load category page:", error);
-      setPosts([]);
-      setCategoryName("");
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, slug]);
-
-  useEffect(() => {
-    void loadCategoryPage();
-  }, [loadCategoryPage]);
+  if (pagination.totalPages > 0 && page > pagination.totalPages) {
+    notFound();
+  }
 
   return (
     <div className="blog-container">
@@ -126,15 +80,11 @@ export default function CategoryPage() {
         <div className="blog-posts">
           <div className="category-header">
             <FolderOutlined style={{ fontSize: 32, color: "#722ed1" }} />
-            <h1>{categoryName || "Category"}</h1>
-            <p>{total} posts</p>
+            <h1>{category.name}</h1>
+            <p>{pagination.total} posts</p>
           </div>
 
-          {loading ? (
-            <div style={{ textAlign: "center", padding: 100 }}>
-              <Spin size="large" />
-            </div>
-          ) : posts.length === 0 ? (
+          {posts.length === 0 ? (
             <Empty description="No posts found in this category." />
           ) : (
             <>
@@ -142,15 +92,41 @@ export default function CategoryPage() {
                 <PostCard key={post.id} post={post} />
               ))}
 
-              {total > pageSize && (
+              {pagination.total > pagination.pageSize && (
                 <div className="blog-pagination">
                   <Pagination
                     current={page}
-                    total={total}
-                    pageSize={pageSize}
-                    onChange={setPage}
+                    total={pagination.total}
+                    pageSize={pagination.pageSize}
                     showSizeChanger={false}
                     showTotal={(count) => `${count} posts`}
+                    itemRender={(targetPage, type, original) => {
+                      if (type === "page") {
+                        return (
+                          <a href={getCategoryPageHref(category.slug, targetPage)}>
+                            {targetPage}
+                          </a>
+                        );
+                      }
+
+                      if (type === "prev" && page > 1) {
+                        return (
+                          <a href={getCategoryPageHref(category.slug, page - 1)}>
+                            Prev
+                          </a>
+                        );
+                      }
+
+                      if (type === "next" && page < pagination.totalPages) {
+                        return (
+                          <a href={getCategoryPageHref(category.slug, page + 1)}>
+                            Next
+                          </a>
+                        );
+                      }
+
+                      return original;
+                    }}
                   />
                 </div>
               )}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Card, Col, Row, Select, Spin, Table } from "antd";
+import { App, Card, Col, Row, Select, Spin, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
   EyeOutlined,
@@ -44,6 +44,7 @@ interface StatsResponse {
 }
 
 export default function StatsPage() {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(7);
   const [stats, setStats] = useState<StatsData | null>(null);
@@ -57,13 +58,16 @@ export default function StatsPage() {
 
       if (data.success) {
         setStats(data.data);
+      } else {
+        message.error(data.error || "加载统计数据失败");
       }
     } catch (error) {
       console.error("Failed to load stats:", error);
+      message.error("加载统计数据失败");
     } finally {
       setLoading(false);
     }
-  }, [days]);
+  }, [days, message]);
 
   useEffect(() => {
     void loadStats();
@@ -79,7 +83,7 @@ export default function StatsPage() {
 
   const topPostsColumns: ColumnsType<TopPost> = [
     {
-      title: "Post",
+      title: "文章",
       dataIndex: "title",
       key: "title",
       ellipsis: true,
@@ -90,7 +94,7 @@ export default function StatsPage() {
       ),
     },
     {
-      title: "Views",
+      title: "浏览量",
       dataIndex: "viewCount",
       key: "viewCount",
       width: 100,
@@ -99,7 +103,7 @@ export default function StatsPage() {
 
   const refererColumns: ColumnsType<RefererStat> = [
     {
-      title: "Referer",
+      title: "来源",
       dataIndex: "referer",
       key: "referer",
       ellipsis: true,
@@ -107,12 +111,12 @@ export default function StatsPage() {
         try {
           return new URL(text).hostname;
         } catch {
-          return text || "Direct";
+          return text || "直接访问";
         }
       },
     },
     {
-      title: "Visits",
+      title: "访问量",
       dataIndex: "count",
       key: "count",
       width: 90,
@@ -120,8 +124,8 @@ export default function StatsPage() {
   ];
 
   const dailyColumns: ColumnsType<DailyStat> = [
-    { title: "Date", dataIndex: "date", key: "date" },
-    { title: "Visits", dataIndex: "count", key: "count" },
+    { title: "日期", dataIndex: "date", key: "date" },
+    { title: "访问量", dataIndex: "count", key: "count" },
   ];
 
   return (
@@ -134,15 +138,15 @@ export default function StatsPage() {
           alignItems: "center",
         }}
       >
-        <h2 style={{ margin: 0 }}>Traffic Overview</h2>
+        <h2 style={{ margin: 0 }}>访问概览</h2>
         <Select
           value={days}
           onChange={setDays}
           style={{ width: 140 }}
           options={[
-            { value: 7, label: "Last 7 days" },
-            { value: 14, label: "Last 14 days" },
-            { value: 30, label: "Last 30 days" },
+            { value: 7, label: "最近 7 天" },
+            { value: 14, label: "最近 14 天" },
+            { value: 30, label: "最近 30 天" },
           ]}
         />
       </div>
@@ -150,7 +154,7 @@ export default function StatsPage() {
       <Row gutter={12}>
         <Col xs={12} sm={6}>
           <MetricCard
-            title="Total Views"
+            title="总浏览量"
             value={stats.totalViews}
             icon={<EyeOutlined />}
             color="#1890ff"
@@ -158,7 +162,7 @@ export default function StatsPage() {
         </Col>
         <Col xs={12} sm={6}>
           <MetricCard
-            title="Visitors"
+            title="访客数"
             value={stats.uniqueVisitors}
             icon={<UserOutlined />}
             color="#52c41a"
@@ -166,7 +170,7 @@ export default function StatsPage() {
         </Col>
         <Col xs={12} sm={6}>
           <MetricCard
-            title="Avg / Day"
+            title="日均浏览"
             value={Math.round(stats.totalViews / days)}
             icon={<RiseOutlined />}
             color="#faad14"
@@ -174,7 +178,7 @@ export default function StatsPage() {
         </Col>
         <Col xs={12} sm={6}>
           <MetricCard
-            title="Top Posts"
+            title="热门文章"
             value={stats.topPosts.length}
             icon={<FileTextOutlined />}
             color="#722ed1"
@@ -184,7 +188,7 @@ export default function StatsPage() {
 
       <Row gutter={12} style={{ marginTop: 12 }}>
         <Col xs={24} lg={12}>
-          <Card title="Daily Visits" size="small">
+          <Card title="每日访问" size="small">
             <Table
               columns={dailyColumns}
               dataSource={stats.dailyStats}
@@ -195,7 +199,7 @@ export default function StatsPage() {
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="Top 10 Posts" size="small">
+          <Card title="热门文章 Top 10" size="small">
             <Table
               columns={topPostsColumns}
               dataSource={stats.topPosts}
@@ -209,7 +213,7 @@ export default function StatsPage() {
 
       <Row gutter={12} style={{ marginTop: 12 }}>
         <Col xs={24}>
-          <Card title="Traffic Sources" size="small">
+          <Card title="流量来源" size="small">
             <Table
               columns={refererColumns}
               dataSource={stats.referers}

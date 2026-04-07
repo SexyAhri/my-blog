@@ -28,7 +28,7 @@ export async function GET() {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch tags",
+        error: error instanceof Error ? error.message : "获取标签失败",
       },
       { status: 500 },
     );
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     if (!name || !slug) {
       return NextResponse.json(
-        { success: false, error: "Name and slug are required" },
+        { success: false, error: "名称和别名不能为空" },
         { status: 400 },
       );
     }
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       return NextResponse.json(
-        { success: false, error: "Slug already exists" },
+        { success: false, error: "别名已存在" },
         { status: 400 },
       );
     }
@@ -76,13 +76,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: tag,
-      message: "Tag created",
+      message: "标签已创建",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to create tag",
+        error: error instanceof Error ? error.message : "创建标签失败",
       },
       { status: 500 },
     );

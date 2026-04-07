@@ -55,7 +55,7 @@ export default function CategoriesPage() {
         setCategories(data.data);
       }
     } catch {
-      message.error("Failed to load categories");
+      message.error("加载分类失败");
     } finally {
       setLoading(false);
     }
@@ -72,10 +72,10 @@ export default function CategoriesPage() {
 
   const handleDelete = (id: string) => {
     modal.confirm({
-      title: "Delete category",
-      content: "This action cannot be undone. Continue?",
-      okText: "Delete",
-      cancelText: "Cancel",
+      title: "删除分类",
+      content: "删除后无法恢复，确定继续吗？",
+      okText: "删除",
+      cancelText: "取消",
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
@@ -88,13 +88,13 @@ export default function CategoriesPage() {
           };
 
           if (data.success) {
-            message.success("Category deleted");
+            message.success("分类已删除");
             await loadCategories();
           } else {
-            message.error(data.error || "Failed to delete category");
+            message.error(data.error || "删除分类失败");
           }
         } catch {
-          message.error("Failed to delete category");
+          message.error("删除分类失败");
         }
       },
     });
@@ -118,15 +118,15 @@ export default function CategoriesPage() {
       const data = (await res.json()) as { success: boolean; error?: string };
 
       if (data.success) {
-        message.success(editingCategory ? "Category updated" : "Category created");
+        message.success(editingCategory ? "分类已更新" : "分类已创建");
         setDrawerOpen(false);
         setEditingCategory(null);
         await loadCategories();
       } else {
-        message.error(data.error || "Operation failed");
+        message.error(data.error || "操作失败");
       }
     } catch {
-      message.error("Operation failed");
+      message.error("操作失败");
     } finally {
       setSubmitting(false);
     }
@@ -139,27 +139,27 @@ export default function CategoriesPage() {
 
   const columns: ColumnsType<Category> = [
     {
-      title: "Name",
+      title: "名称",
       dataIndex: "name",
       key: "name",
       width: "25%",
     },
     {
-      title: "Slug",
+      title: "别名",
       dataIndex: "slug",
       key: "slug",
       width: "20%",
       render: (text: string) => <code style={{ color: "#1890ff" }}>{text}</code>,
     },
     {
-      title: "Description",
+      title: "描述",
       dataIndex: "description",
       key: "description",
       width: "35%",
       render: (text?: string) => text || <span style={{ color: "#999" }}>-</span>,
     },
     {
-      title: "Posts",
+      title: "文章数",
       key: "posts",
       width: "10%",
       render: (_value: unknown, record: Category) => (
@@ -167,13 +167,13 @@ export default function CategoriesPage() {
       ),
     },
     {
-      title: "Actions",
+      title: "操作",
       key: "action",
       width: "10%",
       render: (_value: unknown, record: Category) => (
         <Space size="small">
           <Button type="link" size="small" onClick={() => handleEdit(record)}>
-            Edit
+            编辑
           </Button>
           <Button
             type="link"
@@ -181,7 +181,7 @@ export default function CategoriesPage() {
             danger
             onClick={() => handleDelete(record.id)}
           >
-            Delete
+            删除
           </Button>
         </Space>
       ),
@@ -193,7 +193,7 @@ export default function CategoriesPage() {
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12}>
           <MetricCard
-            title="Categories"
+            title="分类数"
             value={categories.length}
             icon={<FolderOutlined />}
             color="#1890ff"
@@ -201,7 +201,7 @@ export default function CategoriesPage() {
         </Col>
         <Col xs={24} sm={12}>
           <MetricCard
-            title="Posts in Categories"
+            title="分类下文章数"
             value={totalPosts}
             icon={<FolderOutlined />}
             color="#52c41a"
@@ -210,11 +210,11 @@ export default function CategoriesPage() {
       </Row>
 
       <DataTable<Category>
-        cardTitle="Category List"
+        cardTitle="分类列表"
         cardExtra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => void loadCategories()}>
-              Refresh
+              刷新
             </Button>
             <Button
               type="primary"
@@ -224,7 +224,7 @@ export default function CategoriesPage() {
                 setDrawerOpen(true);
               }}
             >
-              Add Category
+              新建分类
             </Button>
           </Space>
         }
@@ -236,7 +236,7 @@ export default function CategoriesPage() {
       />
 
       <FormDrawer<CategoryFormValues>
-        title={editingCategory ? "Edit Category" : "Add Category"}
+        title={editingCategory ? "编辑分类" : "新建分类"}
         open={drawerOpen}
         onClose={() => {
           setDrawerOpen(false);
@@ -260,9 +260,9 @@ export default function CategoriesPage() {
         }
         loading={submitting}
       >
-        <InputItem name="name" label="Category Name" required />
-        <InputItem name="slug" label="Slug" required />
-        <TextAreaItem name="description" label="Description" rows={3} span={3} />
+        <InputItem name="name" label="分类名称" required />
+        <InputItem name="slug" label="别名" required />
+        <TextAreaItem name="description" label="描述" rows={3} span={3} />
       </FormDrawer>
     </div>
   );

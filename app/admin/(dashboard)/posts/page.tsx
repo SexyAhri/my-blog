@@ -71,11 +71,11 @@ export default function PostsPage() {
         setPosts(data.data);
       } else {
         setPosts([]);
-        message.error(data.error || "Failed to load posts");
+        message.error(data.error || "加载文章失败");
       }
     } catch {
       setPosts([]);
-      message.error("Failed to load posts");
+      message.error("加载文章失败");
     } finally {
       setLoading(false);
     }
@@ -87,10 +87,10 @@ export default function PostsPage() {
 
   const handleDelete = (id: string) => {
     modal.confirm({
-      title: "Delete post",
-      content: "This action cannot be undone. Continue?",
-      okText: "Delete",
-      cancelText: "Cancel",
+      title: "删除文章",
+      content: "删除后无法恢复，确定继续吗？",
+      okText: "删除",
+      cancelText: "取消",
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
@@ -100,13 +100,13 @@ export default function PostsPage() {
           const data = (await res.json()) as MutationResponse;
 
           if (data.success) {
-            message.success("Post deleted");
+            message.success("文章已删除");
             await loadPosts();
           } else {
-            message.error(data.error || "Failed to delete post");
+            message.error(data.error || "删除文章失败");
           }
         } catch {
-          message.error("Failed to delete post");
+          message.error("删除文章失败");
         }
       },
     });
@@ -114,10 +114,10 @@ export default function PostsPage() {
 
   const handleBatchDelete = () => {
     modal.confirm({
-      title: "Delete selected posts",
-      content: `Delete ${selectedRowKeys.length} selected posts? This cannot be undone.`,
-      okText: "Delete",
-      cancelText: "Cancel",
+      title: "批量删除文章",
+      content: `确定删除已选中的 ${selectedRowKeys.length} 篇文章吗？该操作不可恢复。`,
+      okText: "删除",
+      cancelText: "取消",
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
@@ -127,11 +127,11 @@ export default function PostsPage() {
             ),
           );
           const successCount = results.filter((result) => result.ok).length;
-          message.success(`Deleted ${successCount} posts`);
+          message.success(`已删除 ${successCount} 篇文章`);
           setSelectedRowKeys([]);
           await loadPosts();
         } catch {
-          message.error("Failed to delete selected posts");
+          message.error("批量删除失败");
         }
       },
     });
@@ -150,12 +150,12 @@ export default function PostsPage() {
       );
       const successCount = results.filter((result) => result.ok).length;
       message.success(
-        `${published ? "Published" : "Unpublished"} ${successCount} posts`,
+        `${published ? "已发布" : "已转为草稿"} ${successCount} 篇文章`,
       );
       setSelectedRowKeys([]);
       await loadPosts();
     } catch {
-      message.error("Batch update failed");
+      message.error("批量更新失败");
     }
   };
 
@@ -164,7 +164,7 @@ export default function PostsPage() {
 
   const columns: ColumnsType<Post> = [
     {
-      title: "Title",
+      title: "标题",
       dataIndex: "title",
       key: "title",
       width: "30%",
@@ -172,21 +172,21 @@ export default function PostsPage() {
         <div>
           <div style={{ fontWeight: 500 }}>{text}</div>
           <div style={{ fontSize: 12, color: "#999", marginTop: 4 }}>
-            Author: {record.author.name || record.author.email}
+            作者：{record.author.name || record.author.email}
           </div>
         </div>
       ),
     },
     {
-      title: "Category",
+      title: "分类",
       dataIndex: ["category", "name"],
       key: "category",
       width: "14%",
       render: (text?: string) =>
-        text || <span style={{ color: "#999" }}>Uncategorized</span>,
+        text || <span style={{ color: "#999" }}>未分类</span>,
     },
     {
-      title: "Status",
+      title: "状态",
       dataIndex: "published",
       key: "published",
       width: "12%",
@@ -195,19 +195,19 @@ export default function PostsPage() {
           icon={published ? <CheckCircleOutlined /> : <EditOutlined />}
           color={published ? "success" : "warning"}
         >
-          {published ? "Published" : "Draft"}
+          {published ? "已发布" : "草稿"}
         </Tag>
       ),
     },
     {
-      title: "Views",
+      title: "浏览量",
       dataIndex: "viewCount",
       key: "viewCount",
       width: "10%",
       render: (count: number) => `${count}`,
     },
     {
-      title: "Created",
+      title: "创建时间",
       dataIndex: "createdAt",
       key: "createdAt",
       width: "16%",
@@ -219,7 +219,7 @@ export default function PostsPage() {
         }),
     },
     {
-      title: "Actions",
+      title: "操作",
       key: "action",
       width: "18%",
       render: (_value, record) => (
@@ -229,14 +229,14 @@ export default function PostsPage() {
             size="small"
             onClick={() => router.push(`/admin/posts/${record.id}/edit`)}
           >
-            Edit
+            编辑
           </Button>
           <Button
             type="link"
             size="small"
             onClick={() => window.open(`/posts/${record.slug}`, "_blank")}
           >
-            View
+            查看
           </Button>
           <Button
             type="link"
@@ -244,7 +244,7 @@ export default function PostsPage() {
             danger
             onClick={() => handleDelete(record.id)}
           >
-            Delete
+            删除
           </Button>
         </Space>
       ),
@@ -256,7 +256,7 @@ export default function PostsPage() {
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={8}>
           <MetricCard
-            title="Total Posts"
+            title="文章总数"
             value={posts.length}
             icon={<FileTextOutlined />}
             color="#1890ff"
@@ -264,7 +264,7 @@ export default function PostsPage() {
         </Col>
         <Col xs={24} sm={8}>
           <MetricCard
-            title="Published"
+            title="已发布"
             value={publishedCount}
             icon={<CheckCircleOutlined />}
             color="#52c41a"
@@ -272,7 +272,7 @@ export default function PostsPage() {
         </Col>
         <Col xs={24} sm={8}>
           <MetricCard
-            title="Drafts"
+            title="草稿数"
             value={draftCount}
             icon={<EditOutlined />}
             color="#faad14"
@@ -281,38 +281,38 @@ export default function PostsPage() {
       </Row>
 
       <DataTable<Post>
-        cardTitle="Posts"
+        cardTitle="文章列表"
         cardExtra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => void loadPosts()}>
-              Refresh
+              刷新
             </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => router.push("/admin/posts/new")}
             >
-              New Post
+              新建文章
             </Button>
           </Space>
         }
         cardChildren={
           selectedRowKeys.length > 0 ? (
             <Space style={{ marginBottom: 16 }}>
-              <span>{selectedRowKeys.length} selected</span>
+              <span>已选择 {selectedRowKeys.length} 项</span>
               <Button
                 size="small"
                 icon={<CheckCircleOutlined />}
                 onClick={() => void handleBatchPublish(true)}
               >
-                Publish
+                发布
               </Button>
               <Button
                 size="small"
                 icon={<EditOutlined />}
                 onClick={() => void handleBatchPublish(false)}
               >
-                Move to Draft
+                转为草稿
               </Button>
               <Button
                 size="small"
@@ -320,7 +320,7 @@ export default function PostsPage() {
                 icon={<DeleteOutlined />}
                 onClick={handleBatchDelete}
               >
-                Delete Selected
+                删除所选
               </Button>
             </Space>
           ) : null

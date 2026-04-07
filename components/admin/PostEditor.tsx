@@ -127,7 +127,7 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
       <div className="tiptap-toolbar">
         <Space wrap>
           <Space.Compact>
-            <Tooltip title="Bold (Ctrl+B)">
+            <Tooltip title="加粗 (Ctrl+B)">
               <button
                 type="button"
                 onClick={() => editor.chain().focus().toggleBold().run()}
@@ -136,7 +136,7 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
                 <strong>B</strong>
               </button>
             </Tooltip>
-            <Tooltip title="Italic (Ctrl+I)">
+            <Tooltip title="斜体 (Ctrl+I)">
               <button
                 type="button"
                 onClick={() => editor.chain().focus().toggleItalic().run()}
@@ -145,7 +145,7 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
                 <em>I</em>
               </button>
             </Tooltip>
-            <Tooltip title="Strike">
+            <Tooltip title="删除线">
               <button
                 type="button"
                 onClick={() => editor.chain().focus().toggleStrike().run()}
@@ -159,7 +159,7 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
           <div className="divider" />
 
           <Space.Compact>
-            <Tooltip title="Heading 1 (Ctrl+1)">
+            <Tooltip title="一级标题 (Ctrl+1)">
               <button
                 type="button"
                 onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
@@ -170,7 +170,7 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
                 H1
               </button>
             </Tooltip>
-            <Tooltip title="Heading 2 (Ctrl+2)">
+            <Tooltip title="二级标题 (Ctrl+2)">
               <button
                 type="button"
                 onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
@@ -181,7 +181,7 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
                 H2
               </button>
             </Tooltip>
-            <Tooltip title="Heading 3 (Ctrl+3)">
+            <Tooltip title="三级标题 (Ctrl+3)">
               <button
                 type="button"
                 onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
@@ -197,16 +197,16 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
           <div className="divider" />
 
           <Space.Compact>
-            <Tooltip title="Bullet List">
+            <Tooltip title="无序列表">
               <button
                 type="button"
                 onClick={() => editor.chain().focus().toggleBulletList().run()}
                 className={editor.isActive("bulletList") ? "is-active" : ""}
               >
-                List
+                列表
               </button>
             </Tooltip>
-            <Tooltip title="Ordered List">
+            <Tooltip title="有序列表">
               <button
                 type="button"
                 onClick={() => editor.chain().focus().toggleOrderedList().run()}
@@ -220,24 +220,24 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
           <div className="divider" />
 
           <Space.Compact>
-            <Tooltip title="Insert Image">
+            <Tooltip title="插入图片">
               <button
                 type="button"
                 onClick={() => setImagePickerVisible(true)}
               >
-                Image
+                图片
               </button>
             </Tooltip>
-            <Tooltip title="Insert Link (Ctrl+K)">
+            <Tooltip title="插入链接 (Ctrl+K)">
               <button
                 type="button"
                 onClick={() => setShowLinkInput(true)}
                 className={editor.isActive("link") ? "is-active" : ""}
               >
-                Link
+                链接
               </button>
             </Tooltip>
-            <Tooltip title="Code Block (Ctrl+`)">
+            <Tooltip title="代码块 (Ctrl+`)">
               <button
                 type="button"
                 onClick={() => editor.chain().focus().toggleCodeBlock().run()}
@@ -246,13 +246,13 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
                 {"</>"}
               </button>
             </Tooltip>
-            <Tooltip title="Quote">
+            <Tooltip title="引用">
               <button
                 type="button"
                 onClick={() => editor.chain().focus().toggleBlockquote().run()}
                 className={editor.isActive("blockquote") ? "is-active" : ""}
               >
-                &quot; Quote
+                引用
               </button>
             </Tooltip>
           </Space.Compact>
@@ -260,30 +260,30 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
           <div className="divider" />
 
           <Space.Compact>
-            <Tooltip title="Horizontal Rule">
+            <Tooltip title="分隔线">
               <button
                 type="button"
                 onClick={() => editor.chain().focus().setHorizontalRule().run()}
               >
-                Rule
+                分隔
               </button>
             </Tooltip>
-            <Tooltip title="Undo">
+            <Tooltip title="撤销">
               <button
                 type="button"
                 onClick={() => editor.chain().focus().undo().run()}
                 disabled={!editor.can().undo()}
               >
-                Undo
+                撤销
               </button>
             </Tooltip>
-            <Tooltip title="Redo">
+            <Tooltip title="重做">
               <button
                 type="button"
                 onClick={() => editor.chain().focus().redo().run()}
                 disabled={!editor.can().redo()}
               >
-                Redo
+                重做
               </button>
             </Tooltip>
           </Space.Compact>
@@ -309,7 +309,7 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
           />
           <Space>
             <Button size="small" onClick={applyLink} type="primary">
-              Apply
+              应用
             </Button>
             <Button
               size="small"
@@ -318,7 +318,7 @@ export default function PostEditor({ content, onChange }: PostEditorProps) {
                 setLinkUrl("");
               }}
             >
-              Cancel
+              取消
             </Button>
           </Space>
         </div>
